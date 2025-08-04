@@ -1,9 +1,14 @@
 <template>
   <div>
     <h2>Anonymous Posts</h2>
-    <div v-if="posts.length === 0">
+
+    <div v-if="loading">Loading posts...</div>
+    <div v-if="error">{{ error }}</div>
+
+    <div v-if="posts.length === 0 && !loading">
       <p>No posts yet.</p>
     </div>
+
     <div v-for="post in posts" :key="post.id" class="post">
       <p>{{ post.content }}</p>
       <small>{{ formatDate(post.created_at) }}</small>
@@ -13,28 +18,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { usePosts } from '../../composables/usePosts.js'
 
-const posts = ref([])
+const { posts, loading, error } = usePosts()
 
-const loadPosts = async () => {
-  try {
-    const response = await axios.get('/api/posts')
-    posts.value = response.data
-  } catch (error) {
-    console.error('Failed to load posts:', error)
-  }
-}
-
-const formatDate = (timestamp) => {
+function formatDate(timestamp) {
   return new Date(timestamp).toLocaleString()
 }
-
-onMounted(() => {
-  loadPosts()
-  window.addEventListener('post-created', loadPosts)
-})
 </script>
 
 <style scoped>

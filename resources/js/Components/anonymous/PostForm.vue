@@ -2,28 +2,39 @@
   <form @submit.prevent="submitPost" class="post-form">
     <textarea
       v-model="content"
-      placeholder="Write your anonymous message..."
+      placeholder="Write anonymously..."
       rows="4"
     ></textarea>
-    <button type="submit">Post</button>
+    <div v-if="error" style="color: red">{{ error }}</div>
+    <button type="submit" :disabled="loading">Post</button>
   </form>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import PostService from '../../services/PostService'
 
 const content = ref('')
+const loading = ref(false)
+const error = ref(null)
 
 const submitPost = async () => {
-  if (!content.value.trim()) return
+  error.value = null
+  if (!content.value.trim()) {
+    error.value = 'Post cannot be empty.'
+    return
+  }
 
+  loading.value = true
   try {
-    await axios.post('/api/posts', { content: content.value })
+    await PostService.createPost(content.value)
     content.value = ''
-    window.dispatchEvent(new Event('post-created')) // tell feed to refresh
-  } catch (error) {
-    console.error('Post failed:', error)
+    window.dispatchEvent(new Event('post-created'))
+  } catch (err) {
+    error.value = 'Failed to post. Please try again.'
+    console.error(err)
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -35,12 +46,10 @@ const submitPost = async () => {
 textarea {
   width: 100%;
   padding: 10px;
-  font-size: 1rem;
-  resize: vertical;
 }
 button {
   margin-top: 10px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   font-weight: bold;
 }
 </style>
