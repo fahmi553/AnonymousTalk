@@ -7,11 +7,13 @@ import PostForm from './Components/anonymous/PostForm.vue';
 import PostFeed from './Components/anonymous/PostFeed.vue';
 import CommentForm from './Components/anonymous/CommentForm.vue';
 import CommentList from './Components/anonymous/CommentList.vue';
+import PostDetail from './Components/anonymous/PostDetail.vue'
 
 const app = createApp({});
 app.component('post-form', PostForm);
 app.component('post-feed', PostFeed);
 app.component('comment-form', CommentForm);
 app.component('comment-list', CommentList);
+app.component('post-detail', PostDetail)
 
 app.mount('#app');

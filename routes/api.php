@@ -5,7 +5,8 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 
 Route::get('/posts', [PostController::class, 'index']);
-Route::post('/posts', [PostController::class, 'store']);
+Route::post('/posts', [PostController::class, 'store'])->middleware('auth:sanctum');
+Route::get('/posts/{post}', [PostController::class, 'showApi']);
 
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::post('/comments', [CommentController::class, 'store']);

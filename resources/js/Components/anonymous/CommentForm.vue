@@ -15,22 +15,24 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
-import { defineProps } from 'vue'
 
 const props = defineProps(['postId', 'userId'])
-
+const emit = defineEmits(['comment-submitted'])
 const content = ref('')
 
 const submitComment = async () => {
   if (!content.value.trim()) return
 
-  await axios.post('/api/comments', {
-  post_id: props.postId,
-  user_id: props.userId,
-  content: content.value
-})
-
-content.value = ''
-window.dispatchEvent(new Event('comment-added'))
+  try {
+    const res = await axios.post('/api/comments', {
+      post_id: props.postId,
+      user_id: props.userId,
+      content: content.value
+    })
+    emit('comment-submitted', res.data)
+    content.value = ''
+  } catch (err) {
+    console.error('Error submitting comment', err)
+  }
 }
 </script>

@@ -9,10 +9,12 @@ class CommentController extends Controller
 {
     public function index($postId)
     {
+        $perPage = request()->get('per_page', 5);
+
         $comments = Comment::with('user')
             ->where('post_id', $postId)
-            ->latest()
-            ->get();
+            ->oldest()
+            ->paginate($perPage);
 
         return response()->json($comments);
     }
@@ -26,6 +28,7 @@ class CommentController extends Controller
         ]);
 
         $comment = Comment::create($validated);
+        $comment->load('user');
 
         return response()->json($comment, 201);
     }

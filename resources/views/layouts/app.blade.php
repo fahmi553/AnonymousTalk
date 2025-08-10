@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Anonymous Talk</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -11,7 +12,10 @@
 <body class="d-flex flex-column min-vh-100">
     @include('layouts.header')
     <div class="d-flex flex-grow-1">
-        @include('layouts.sidebar')
+        @if (!request()->is('login', 'register', 'password/*'))
+            @include('layouts.sidebar')
+        @endif
+
         <main class="flex-grow-1 p-4">
             @if (session('status'))
                 <div class="alert alert-info">{{ session('status') }}</div>

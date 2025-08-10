@@ -7,7 +7,7 @@
           v-model="title"
           type="text"
           class="form-control"
-          placeholder="Post Title (optional)"
+          placeholder="Post Title"
         />
       </div>
 
@@ -45,16 +45,24 @@ const category = ref('')
 const submitPost = async () => {
   if (!content.value.trim()) return
 
-  await axios.post('/api/posts', {
+  try {
+    const response = await axios.post('/posts', {
+    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
     title: title.value,
     content: content.value,
     category: category.value || 'General'
-  })
+    })
 
-  title.value = ''
-  content.value = ''
-  category.value = ''
+    window.dispatchEvent(new CustomEvent('post-created', { detail: response.data }))
 
-  window.dispatchEvent(new Event('post-created'))
+    title.value = ''
+    content.value = ''
+    category.value = ''
+
+    window.location.href = '/'
+  } catch (error) {
+    console.error('Error creating post', error)
+  }
 }
 </script>
+

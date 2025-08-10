@@ -12,17 +12,40 @@ class PostController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Post::with('user')->latest();
+        $query = Post::with(['comments' => function ($q) {
+            $q->orderBy('created_at', 'asc');
+        }, 'comments.user']);
 
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
-
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        return $query->get();
+        $posts = $query->get()->map(function ($post) {
+            return [
+                'post_id' => $post->post_id,
+                'title' => $post->title,
+                'content' => $post->content,
+                'category' => $post->category,
+                'created_at' => $post->created_at->toISOString(),
+                'user' => [
+                    'username' => $post->user->username ?? 'Anonymous'
+                ],
+                'comments' => $post->comments->map(function ($comment) {
+                    return [
+                        'comment_id' => $comment->comment_id,
+                        'content' => $comment->content,
+                        'user' => [
+                            'username' => $comment->user->username ?? 'Anonymous'
+                        ]
+                    ];
+                })
+            ];
+        });
+
+        return response()->json($posts);
     }
 
     public function create()
@@ -36,13 +59,18 @@ class PostController extends Controller
             'content' => 'required|string|max:1000',
         ]);
 
-        Post::create([
-            'user_id' => Auth::id(),
+        $post = Post::create([
+            'user_id' => auth()->id(),
+            'title' => $request->title,
             'content' => $request->content,
+            'category' => $request->category ?? 'General'
         ]);
 
-        return redirect('/')->with('success', 'Post created successfully!');
+        $post->load('user');
+
+        return response()->json($post);
     }
+
     public function updateStatus(Request $request, Post $post)
     {
         $request->validate([
@@ -54,11 +82,23 @@ class PostController extends Controller
 
         return response()->json(['message' => 'Post status updated.']);
     }
+
     public function show(Post $post)
     {
-        $post->load(['user', 'comments.user']);
         return view('posts.show', compact('post'));
     }
 
+    public function showApi(Post $post)
+    {
+        $post->load([
+            'user',
+            'comments' => function ($query) {
+                $query->orderBy('created_at', 'asc')
+                    ->with('user');
+            }
+        ]);
+
+        return response()->json($post);
+    }
 
 }
