@@ -9,3 +9,4 @@ Route::post('/posts', [PostController::class, 'store']);
 
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::post('/comments', [CommentController::class, 'store']);
+Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);

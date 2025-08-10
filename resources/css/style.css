@@ -1,0 +1,119 @@
+body {
+    background-color: #f5f6f8;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #222;
+}
+
+.main-content {
+    flex: 1;
+    padding-top: 20px;
+}
+.header {
+    background-color: #0d6efd;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+.feed-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.post-card {
+    background: white;
+    border: 1px solid #e6ecf0;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.post-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.post-header .username {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.post-header .time {
+    color: #657786;
+    font-size: 0.9rem;
+}
+
+.post-content {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+.comment-section {
+    margin-top: 10px;
+    border-top: 1px solid #e6ecf0;
+    padding-top: 10px;
+}
+
+.comment {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+}
+
+.comment strong {
+    font-weight: bold;
+    margin-right: 5px;
+}
+.comment-form {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.comment-form input {
+    flex: 1;
+    border-radius: 20px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+}
+
+.comment-form button {
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.comment-form button:hover {
+    background: #0b5ed7;
+}
+.footer {
+    background-color: white;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    padding: 15px;
+    color: #666;
+    font-size: 14px;
+}
+.sidebar-link {
+    display: block;
+    padding: 6px 0;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.sidebar-link:hover {
+    color: #0d6efd;
+}

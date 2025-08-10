@@ -10,6 +10,7 @@ class Post extends Model
     use HasFactory;
 
     protected $primaryKey = 'post_id';
+    public const STATUSES = ['published', 'moderated', 'deleted'];
 
     protected $fillable = [
         'user_id',
@@ -27,7 +28,7 @@ class Post extends Model
 
     public function comments()
     {
-        return $this->hasMany(Comment::class, 'post_id');
+        return $this->hasMany(Comment::class, 'post_id')->latest();
     }
 
     public function reports()

@@ -1,55 +1,60 @@
 <template>
-  <form @submit.prevent="submitPost" class="post-form">
-    <textarea
-      v-model="content"
-      placeholder="Write anonymously..."
-      rows="4"
-    ></textarea>
-    <div v-if="error" style="color: red">{{ error }}</div>
-    <button type="submit" :disabled="loading">Post</button>
-  </form>
+  <div class="mb-4">
+    <h4>Create a New Post</h4>
+    <form @submit.prevent="submitPost" class="card p-3 shadow-sm">
+      <div class="mb-3">
+        <input
+          v-model="title"
+          type="text"
+          class="form-control"
+          placeholder="Post Title (optional)"
+        />
+      </div>
+
+      <div class="mb-3">
+        <textarea
+          v-model="content"
+          class="form-control"
+          rows="4"
+          placeholder="What's on your mind?"
+        ></textarea>
+      </div>
+
+      <div class="mb-3">
+        <select v-model="category" class="form-select">
+          <option disabled value="">Select Category</option>
+          <option>General</option>
+          <option>Help</option>
+          <option>News</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Post</button>
+    </form>
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import PostService from '../../services/PostService'
+import axios from 'axios'
 
+const title = ref('')
 const content = ref('')
-const loading = ref(false)
-const error = ref(null)
+const category = ref('')
 
 const submitPost = async () => {
-  error.value = null
-  if (!content.value.trim()) {
-    error.value = 'Post cannot be empty.'
-    return
-  }
+  if (!content.value.trim()) return
 
-  loading.value = true
-  try {
-    await PostService.createPost(content.value)
-    content.value = ''
-    window.dispatchEvent(new Event('post-created'))
-  } catch (err) {
-    error.value = 'Failed to post. Please try again.'
-    console.error(err)
-  } finally {
-    loading.value = false
-  }
+  await axios.post('/api/posts', {
+    title: title.value,
+    content: content.value,
+    category: category.value || 'General'
+  })
+
+  title.value = ''
+  content.value = ''
+  category.value = ''
+
+  window.dispatchEvent(new Event('post-created'))
 }
 </script>
-
-<style scoped>
-.post-form {
-  margin-bottom: 20px;
-}
-textarea {
-  width: 100%;
-  padding: 10px;
-}
-button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  font-weight: bold;
-}
-</style>

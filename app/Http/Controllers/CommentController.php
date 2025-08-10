@@ -9,10 +9,12 @@ class CommentController extends Controller
 {
     public function index($postId)
     {
-        return Comment::with('user')
+        $comments = Comment::with('user')
             ->where('post_id', $postId)
-            ->orderBy('created_at', 'desc')
+            ->latest()
             ->get();
+
+        return response()->json($comments);
     }
 
     public function store(Request $request)
