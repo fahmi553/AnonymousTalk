@@ -10,6 +10,8 @@ class Post extends Model
     use HasFactory;
 
     protected $primaryKey = 'post_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public const STATUSES = ['published', 'moderated', 'deleted'];
 
     protected $fillable = [
@@ -39,5 +41,15 @@ class Post extends Model
     public function sentimentLogs()
     {
         return $this->hasMany(PostSentimentLog::class, 'post_id');
+    }
+
+    public function categoryModel()
+    {
+        return $this->belongsTo(Category::class, 'category_id', 'category_id');
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(Like::class, 'post_id');
     }
 }

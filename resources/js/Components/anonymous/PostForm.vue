@@ -3,29 +3,19 @@
     <h4>Create a New Post</h4>
     <form @submit.prevent="submitPost" class="card p-3 shadow-sm">
       <div class="mb-3">
-        <input
-          v-model="title"
-          type="text"
-          class="form-control"
-          placeholder="Post Title"
-        />
+        <input v-model="title" type="text" class="form-control" placeholder="Post Title" />
       </div>
 
       <div class="mb-3">
-        <textarea
-          v-model="content"
-          class="form-control"
-          rows="4"
-          placeholder="What's on your mind?"
-        ></textarea>
+        <textarea v-model="content" class="form-control" rows="4" placeholder="What's on your mind?"></textarea>
       </div>
 
       <div class="mb-3">
         <select v-model="category" class="form-select">
           <option disabled value="">Select Category</option>
-          <option>General</option>
-          <option>Help</option>
-          <option>News</option>
+          <option v-for="cat in categories" :key="cat.category_id" :value="cat.name">
+            {{ cat.name }}
+          </option>
         </select>
       </div>
 
@@ -35,34 +25,39 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 const title = ref('')
 const content = ref('')
 const category = ref('')
+const categories = ref([])
+
+const fetchCategories = async () => {
+  const res = await axios.get('/api/categories')
+  categories.value = res.data
+
+  if (!category.value && categories.value.length) {
+    category.value = categories.value[0].name
+  }
+}
+
 
 const submitPost = async () => {
   if (!content.value.trim()) return
 
-  try {
-    const response = await axios.post('/posts', {
-    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+  await axios.post('/api/posts', {
     title: title.value,
     content: content.value,
-    category: category.value || 'General'
-    })
+    category: category.value
+  })
 
-    window.dispatchEvent(new CustomEvent('post-created', { detail: response.data }))
+  title.value = ''
+  content.value = ''
+  category.value = ''
 
-    title.value = ''
-    content.value = ''
-    category.value = ''
-
-    window.location.href = '/'
-  } catch (error) {
-    console.error('Error creating post', error)
-  }
+  window.location.href = '/'
 }
-</script>
 
+onMounted(fetchCategories)
+</script>

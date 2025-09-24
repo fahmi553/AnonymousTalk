@@ -5,43 +5,47 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Post;
 use App\Models\User;
+use App\Models\Category;
 
 class PostSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        $user = User::first() ?? User::create([
-            'username' => 'admin',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-            'trust_score' => 100,
-            'role' => 'admin'
-        ]);
+        $users = User::all();
+        $categories = Category::pluck('name')->toArray();
 
-        $posts = [
-            [
-                'title' => 'Need Advice on Starting a New Job',
-                'content' => 'I am starting a new job next week and feeling both excited and nervous. Any tips to make a good first impression?',
-                'category' => 'Advice',
-            ],
-            [
-                'title' => 'Favorite Places to Travel?',
-                'content' => 'I love visiting nature spots and hiking trails. Where are your favorite places to go for a relaxing trip?',
-                'category' => 'Travel',
-            ],
-            [
-                'title' => 'Struggling with Time Management',
-                'content' => 'I find it hard to balance work, study, and personal time. How do you stay organized and productive?',
-                'category' => 'Lifestyle',
-            ],
+        $samplePosts = [
+            "Need Advice on Starting a New Job",
+            "Best Movies to Watch This Month",
+            "Tips for Staying Motivated in College",
+            "What's Your Favorite Local Food?",
+            "How to Save Money on Groceries",
+            "Is It Worth Upgrading to the Latest iPhone?",
+            "Fun Weekend Activities Around Town",
+            "How to Deal with Stress at Work",
+            "Your Thoughts on Remote Learning?",
+            "Share Your Travel Experiences!"
         ];
 
-        foreach ($posts as $post) {
+        $sampleContents = [
+            "I'm starting a new chapter in my life and would love to hear from people with experience.",
+            "Looking for recommendations — what should I watch next?",
+            "Sometimes it’s hard to stay motivated, especially during exam season.",
+            "There are so many great dishes locally, but I can’t decide my favorite.",
+            "Trying to cut costs this month — any money-saving hacks?",
+            "Thinking about buying the new model but not sure if it’s worth it.",
+            "Need ideas for fun things to do with friends this weekend.",
+            "Work has been really stressful lately, how do you cope?",
+            "Online classes have their pros and cons, what’s your take?",
+            "I had an amazing trip last month — where should I go next?"
+        ];
+
+        for ($i = 0; $i < 20; $i++) {
             Post::create([
-                'user_id' => $user->user_id,
-                'title' => $post['title'],
-                'content' => $post['content'],
-                'category' => $post['category'],
+                'title' => $samplePosts[array_rand($samplePosts)],
+                'content' => $sampleContents[array_rand($sampleContents)],
+                'category_id' => Category::inRandomOrder()->first()->category_id,
+                'user_id' => $users->random()->user_id
             ]);
         }
     }

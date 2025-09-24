@@ -2,6 +2,6 @@
 
 @section('content')
 <div id="app">
-    <post-feed></post-feed>
+    <router-view></router-view>
 </div>
 @endsection

@@ -9,25 +9,31 @@ use App\Models\User;
 
 class CommentSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        $user = User::first();
         $posts = Post::all();
+        $users = User::all();
 
-        $comments = [
-            'Great post! I totally agree with you.',
-            'I had a similar experience and this really helped me.',
-            'Thanks for sharing, very insightful!',
-            'This is something I’ve been thinking about as well.',
-            'Interesting perspective, I’ll keep this in mind.'
+        $sampleComments = [
+            "I completely agree with you!",
+            "That’s a great point, thanks for sharing.",
+            "I’ve experienced something similar before.",
+            "This is really helpful, appreciate it!",
+            "Interesting perspective, I never thought of it that way.",
+            "Could you share more details about that?",
+            "I think it depends on the situation.",
+            "Yes, I can relate to this so much.",
+            "Thanks for posting this, it made my day.",
+            "Haha, that’s so true!"
         ];
 
         foreach ($posts as $post) {
-            foreach ($comments as $text) {
+            $commentCount = rand(1, 5);
+            for ($i = 0; $i < $commentCount; $i++) {
                 Comment::create([
                     'post_id' => $post->post_id,
-                    'user_id' => $user->user_id,
-                    'content' => $text
+                    'user_id' => $users->random()->user_id,
+                    'content' => $sampleComments[array_rand($sampleComments)]
                 ]);
             }
         }

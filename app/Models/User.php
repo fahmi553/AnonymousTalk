@@ -54,4 +54,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Badge::class, 'badge_id');
     }
+
+    public function likes()
+    {
+        return $this->hasMany(Like::class, 'user_id');
+    }
 }

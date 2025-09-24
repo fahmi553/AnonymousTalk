@@ -11,7 +11,9 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
     @include('layouts.header')
-    <div class="d-flex flex-grow-1">
+
+    <!-- 🔹 Vue app mount point -->
+    <div id="app" class="d-flex flex-grow-1">
         @if (!request()->is('login', 'register', 'password/*'))
             @include('layouts.sidebar')
         @endif
@@ -43,6 +45,11 @@
             @yield('content')
         </main>
     </div>
+
     @include('layouts.footer')
+
+    <script>
+        window.authUserId = @json(auth()->id());
+    </script>
 </body>
 </html>

@@ -4,27 +4,41 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        User::create([
-            'username' => 'admin',
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('Qawsedrftgyh456@'),
-            'trust_score' => 100,
-            'role' => 'admin',
-            'badge_id' => null,
-        ]);
-        User::create([
-            'username' => 'ali',
-            'email' => 'ali@gmail.com',
-            'password' => Hash::make('Qawsedrftgyh456@'),
-            'trust_score' => 10,
-            'role' => 'user',
-            'badge_id' => null,
-        ]);
+        // Admin user
+        User::firstOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'username' => 'admin',
+                'password' => bcrypt('Qawsedrftgyh456@'),
+                'trust_score' => 100,
+                'role' => 'admin'
+            ]
+        );
+
+        // Regular users
+        $users = [
+            ['ali@gmail.com', 'ali', 80],
+            ['sara@gmail.com', 'sara', 75],
+            ['john@gmail.com', 'john', 85],
+            ['lisa@gmail.com', 'lisa', 90],
+            ['mike@gmail.com', 'mike', 70],
+        ];
+
+        foreach ($users as [$email, $username, $score]) {
+            User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'username' => $username,
+                    'password' => bcrypt('Qawsedrftgyh456@'),
+                    'trust_score' => $score,
+                    'role' => 'user'
+                ]
+            );
+        }
     }
 }

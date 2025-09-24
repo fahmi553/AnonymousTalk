@@ -9,9 +9,19 @@
           <div class="fw-bold text-dark">{{ post.user?.username ?? 'Anonymous' }}</div>
           <small class="text-muted ms-2">{{ timeAgo(post.created_at) }}</small>
         </div>
+        <small v-if="post.category" class="badge bg-secondary mb-2">{{ post.category }}</small>
+        <h4 class="fw-bold mb-2">{{ post.title }}</h4>
 
-        <h4 v-if="post.title" class="fw-bold mb-2">{{ post.title }}</h4>
         <p class="mb-3">{{ post.content }}</p>
+
+        <button
+          :disabled="!authUserId"
+          class="btn btn-sm me-2"
+          :class="{ 'btn-secondary': !authUserId, 'btn-outline-primary': authUserId && !post.liked, 'btn-primary': post.liked }"
+          @click="authUserId && toggleLike(post)"
+        >
+          ❤️ {{ post.likes_count }}
+        </button>
       </div>
     </div>
 
@@ -26,6 +36,7 @@
     >
       <strong>{{ comment.user?.username ?? 'Anonymous' }}</strong>:
       {{ comment.content }}
+      <small class="text-muted ms-2">{{ timeAgo(comment.created_at) }}</small>
     </div>
 
     <comment-form
@@ -41,54 +52,66 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import CommentForm from './CommentForm.vue'
+    import { ref, onMounted } from 'vue'
+    import { useRoute } from 'vue-router'
+    import axios from 'axios'
+    import CommentForm from './CommentForm.vue'
+    axios.defaults.withCredentials = true
 
-const props = defineProps({
-  postId: Number,
-  authUserId: Number
-})
+    const route = useRoute()
+    const postId = route.params.id
 
-const post = ref(null)
-const loading = ref(true)
-const error = ref('')
+    const post = ref(null)
+    const loading = ref(true)
+    const error = ref('')
+    const authUserId = window.authUserId || null
 
-const loadPost = async () => {
-  loading.value = true
-  try {
-    const res = await axios.get(`/api/posts/${props.postId}`)
-    res.data.comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    post.value = res.data
-  } catch (e) {
-    console.error(e)
-    error.value = 'Failed to load post.'
-  } finally {
-    loading.value = false
-  }
-}
+    const loadPost = async () => {
+    loading.value = true
+    try {
+        const res = await axios.get(`/api/posts/${postId}`)
+        post.value = res.data
+        post.value.comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    } catch (e) {
+        console.error(e)
+        error.value = 'Failed to load post.'
+    } finally {
+        loading.value = false
+    }
+    }
 
-const addComment = (comment) => {
-  post.value.comments.push(comment)
-}
+    const toggleLike = async (post) => {
+    try {
+        await axios.get('/sanctum/csrf-cookie')
+        const res = await axios.post(`/api/posts/${post.post_id}/toggle-like`)
+        post.liked = res.data.liked
+        post.likes_count = res.data.likes_count
+    } catch (err) {
+        console.error('Error toggling like:', err.response?.data || err)
+    }
+    }
 
-const timeAgo = (dateStr) => {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const seconds = Math.floor((now - date) / 1000)
-  const intervals = {
-    year: 31536000,
-    month: 2592000,
-    day: 86400,
-    hour: 3600,
-    minute: 60
-  }
-  for (const unit in intervals) {
-    const interval = Math.floor(seconds / intervals[unit])
-    if (interval >= 1) return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`
-  }
-  return 'Just now'
-}
+    const addComment = (comment) => {
+    post.value.comments.push(comment)
+    }
 
-onMounted(loadPost)
+    const timeAgo = (dateStr) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const seconds = Math.floor((now - date) / 1000)
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    }
+    for (const unit in intervals) {
+        const interval = Math.floor(seconds / intervals[unit])
+        if (interval >= 1) return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`
+    }
+    return 'Just now'
+    }
+
+    onMounted(loadPost)
 </script>

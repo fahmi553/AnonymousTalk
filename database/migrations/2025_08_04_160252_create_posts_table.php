@@ -12,16 +12,17 @@ return new class extends Migration
     public function up()
     {
         Schema::create('posts', function (Blueprint $table) {
-            $table->id('post_id');
-            $table->unsignedBigInteger('user_id');
-            $table->string('title')->nullable();
-            $table->text('content');
-            $table->string('category')->nullable();
-            $table->decimal('sentiment_score', 5, 2)->nullable();
-            $table->enum('status', ['published', 'moderated', 'deleted'])->default('published');
-            $table->timestamps();
+        $table->bigIncrements('post_id');
+        $table->unsignedBigInteger('user_id');
+        $table->unsignedBigInteger('category_id')->nullable();
+        $table->string('title')->nullable();
+        $table->text('content');
+        $table->decimal('sentiment_score', 5, 2)->nullable();
+        $table->enum('status', ['published', 'moderated', 'deleted'])->default('published');
+        $table->timestamps();
 
-            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+        $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+        $table->foreign('category_id')->references('category_id')->on('categories')->nullOnDelete();
         });
     }
 

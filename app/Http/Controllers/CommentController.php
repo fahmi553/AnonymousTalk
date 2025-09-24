@@ -30,6 +30,13 @@ class CommentController extends Controller
         $comment = Comment::create($validated);
         $comment->load('user');
 
-        return response()->json($comment, 201);
+        return response()->json([
+            'comment_id' => $comment->comment_id,
+            'content'    => $comment->content,
+            'created_at' => $comment->created_at->toISOString(),
+            'user'       => [
+                'username' => $comment->user->username ?? 'Anonymous',
+            ],
+        ], 201);
     }
 }
