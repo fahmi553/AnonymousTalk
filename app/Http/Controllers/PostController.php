@@ -96,33 +96,19 @@ class PostController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,user_id',
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'category' => 'nullable|string|exists:categories,name',
+            'title'       => 'required|string|max:255',
+            'content'     => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'user_id'     => 'required|exists:users,user_id',
         ]);
 
         $post = Post::create($validated);
-        $post->load(['user', 'categoryModel', 'comments.user']);
 
         return response()->json([
-            'post_id'   => $post->post_id,
-            'title'     => $post->title,
-            'content'   => $post->content,
-            'status'    => $post->status,
-            'created_at'=> $post->created_at->toISOString(),
-            'user'      => [
-                'username' => $post->user->username ?? 'Anonymous',
-            ],
-            'category'  => $post->categoryModel?->name,
-            'comments'  => $post->comments->map(fn ($comment) => [
-                'comment_id' => $comment->comment_id,
-                'content'    => $comment->content,
-                'created_at' => $comment->created_at->toISOString(),
-                'user'       => [
-                    'username' => $comment->user->username ?? 'Anonymous',
-                ],
-            ]),
+            'post_id'    => $post->post_id,
+            'title'      => $post->title,
+            'content'    => $post->content,
+            'created_at' => $post->created_at->toISOString(),
         ], 201);
     }
 
@@ -147,9 +133,10 @@ class PostController extends Controller
     {
         $post = Post::with([
             'user',
-            'comments.user',
             'categoryModel',
-        ])->withCount(['likes', 'comments'])
+            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user']),
+        ])
+        ->withCount(['likes', 'comments'])
         ->findOrFail($postId);
 
         $liked = false;
@@ -164,22 +151,24 @@ class PostController extends Controller
             'title'       => $post->title,
             'content'     => $post->content,
             'category'    => $post->categoryModel->name ?? null,
-            'created_at'  => $post->created_at ? $post->created_at->toISOString() : null,
-            'user'        => [
-                'username' => $post->user->username ?? 'Anonymous',
-            ],
-            'comments'    => $post->comments->sortBy('created_at')->map(function ($comment) {
+            'created_at'  => $post->created_at?->toISOString(),
+            'user'        => ['username' => $post->user->username ?? 'Anonymous'],
+            'likes_count' => $post->likes_count,
+            'liked'       => $liked,
+            'comments'    => $post->comments->map(function ($comment) {
                 return [
                     'comment_id' => $comment->comment_id,
                     'content'    => $comment->content,
-                    'created_at' => $comment->created_at ? $comment->created_at->toISOString() : null,
-                    'user'       => [
-                        'username' => $comment->user->username ?? 'Anonymous',
-                    ],
+                    'created_at' => $comment->created_at?->toISOString(),
+                    'user'       => ['username' => $comment->user->username ?? 'Anonymous'],
+                    'replies'    => $comment->replies->map(fn($reply) => [
+                        'comment_id' => $reply->comment_id,
+                        'content'    => $reply->content,
+                        'created_at' => $reply->created_at?->toISOString(),
+                        'user'       => ['username' => $reply->user->username ?? 'Anonymous'],
+                    ]),
                 ];
             })->values(),
-            'likes_count' => $post->likes_count,
-            'liked'       => $liked,
         ]);
     }
 

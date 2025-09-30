@@ -1,14 +1,15 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Models\Post;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Auth\Events\PasswordReset;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', fn() => view('welcome'));
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
@@ -17,24 +18,61 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
 
-Route::get('/posts/create', function () {
-    return view('welcome');
-})->middleware('auth')->name('posts.create');
+Route::get('/forgot-password', fn() => view('auth.forgot-password'))
+    ->middleware('guest')
+    ->name('password.request');
 
-Route::get('/posts/{any}', function () {
-    return view('welcome');
-})->where('any', '.*');
+Route::post('/forgot-password', function (Request $request) {
+    $request->validate(['email' => 'required|email']);
+    $status = Password::sendResetLink($request->only('email'));
 
-Route::get('/dashboard', function () {
-    return view('welcome');
-})->middleware(['auth'])->name('dashboard');
+    return $status === Password::RESET_LINK_SENT
+        ? back()->with('status', __($status))
+        : back()->withErrors(['email' => __($status)]);
+})->middleware('guest')->name('password.email');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+Route::get('/reset-password/{token}', fn($token) => view('auth.reset-password', ['token' => $token]))
+    ->middleware('guest')
+    ->name('password.reset');
 
-Route::get('/{any}', function () {
-    return view('welcome');
-})->where('any', '.*');
+Route::post('/reset-password', function (Request $request) {
+    $request->validate([
+        'token'    => 'required',
+        'email'    => 'required|email',
+        'password' => 'required|confirmed|min:8',
+    ]);
+
+    $status = Password::reset(
+        $request->only('email', 'password', 'password_confirmation', 'token'),
+        function ($user, $password) {
+            $user->forceFill([
+                'password' => Hash::make($password),
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            event(new PasswordReset($user));
+        }
+    );
+
+    return $status === Password::PASSWORD_RESET
+        ? redirect()->route('login')->with('status', __($status))
+        : back()->withErrors(['email' => [__($status)]]);
+})->middleware('guest')->name('password.update');
+
+Route::get('/confirm-password', fn() => view('auth.confirm-password'))
+    ->middleware('auth')
+    ->name('password.confirm');
+
+Route::post('/confirm-password', function (Request $request) {
+    $request->validate(['password' => 'required']);
+
+    if (!Hash::check($request->password, $request->user()->password)) {
+        return back()->withErrors(['password' => 'Password is incorrect.']);
+    }
+
+    $request->session()->put('auth.password_confirmed_at', time());
+
+    return redirect()->intended('/');
+})->middleware('auth');
+
+Route::get('/{any}', fn() => view('welcome'))->where('any', '.*');

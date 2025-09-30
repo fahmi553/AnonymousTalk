@@ -10,27 +10,19 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 </head>
 <body class="d-flex flex-column min-vh-100">
-    @include('layouts.header')
 
-    <!-- 🔹 Vue app mount point -->
+    <div id="vue-header"></div>
+
     <div id="app" class="d-flex flex-grow-1">
-        @if (!request()->is('login', 'register', 'password/*'))
+        @unless (request()->is('login', 'register', 'password/*'))
             @include('layouts.sidebar')
-        @endif
-
+        @endunless
         <main class="flex-grow-1 p-4">
-            @if (session('status'))
-                <div class="alert alert-info">{{ session('status') }}</div>
-            @endif
-
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
-
-            @if (session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
-            @endif
-
+            @foreach (['status' => 'info', 'success' => 'success', 'error' => 'danger'] as $msg => $type)
+                @if (session($msg))
+                    <div class="alert alert-{{ $type }}">{{ session($msg) }}</div>
+                @endif
+            @endforeach
             @if ($errors->any())
                 <div class="alert alert-danger">
                     <strong>Something went wrong:</strong>
@@ -41,11 +33,9 @@
                     </ul>
                 </div>
             @endif
-
             @yield('content')
         </main>
     </div>
-
     @include('layouts.footer')
 
     <script>

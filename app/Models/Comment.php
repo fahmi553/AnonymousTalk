@@ -16,6 +16,7 @@ class Comment extends Model
         'user_id',
         'content',
         'sentiment_score',
+        'parent_id',
     ];
 
     public function post()
@@ -31,5 +32,15 @@ class Comment extends Model
     public function sentimentLogs()
     {
         return $this->hasMany(CommentSentimentLog::class, 'comment_id');
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Comment::class, 'parent_id')->with('replies.user');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
     }
 }

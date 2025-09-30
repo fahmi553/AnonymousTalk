@@ -3,7 +3,7 @@
     <h3 class="mb-4 fw-bold text-primary">Latest Posts</h3>
 
     <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
-      <<select v-model="selectedCategory" @change="loadPosts" class="form-select w-auto">
+      <select v-model="selectedCategory" @change="loadPosts" class="form-select w-auto">
         <option value="">All Categories</option>
         <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
           {{ cat.name }}
@@ -37,47 +37,54 @@
 
     <div v-if="loading">Loading posts...</div>
     <div v-if="error" class="text-danger">{{ error }}</div>
-
-    <div v-for="post in posts" :key="post.post_id" class="post-card">
-      <div class="post-header">
-        <span class="username">{{ post.user?.username ?? 'Anonymous' }}</span>
-        <span class="time">· {{ timeAgo(post.created_at) }}</span>
-      </div>
-
-      <small v-if="post.category" class="badge mb-1"
-             :style="{ backgroundColor: getCategoryColor(post.category), color: 'white' }">
-        {{ post.category }}
-      </small>
-
-      <div class="post-content">{{ post.content }}</div>
-
-      <button
-        :disabled="!authUserId"
-        class="btn btn-sm me-2"
-        :class="{ 'btn-secondary': !authUserId, 'btn-outline-primary': authUserId && !post.liked, 'btn-primary': post.liked }"
-        @click="authUserId && toggleLike(post)"
-      >
-        ❤️ {{ post.likes_count }}
-      </button>
-
-      <router-link
-        :to="`/posts/${post.post_id}`"
-        class="text-decoration-none text-primary fw-semibold">
-        View Post
-      </router-link>
-
-      <div v-if="post.comments && post.comments.length > 0" class="comment-section mt-2">
-        <div v-for="comment in post.comments.slice(0, 2)" :key="comment.comment_id" class="comment">
-          <strong>{{ comment.user?.username ?? 'Anonymous' }}</strong>: {{ comment.content }}
+    <div v-for="post in posts" :key="post.post_id" class="card mb-3 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="username">{{ post.user?.username ?? 'Anonymous' }}</strong>
+                <small class="text-muted">· {{ timeAgo(post.created_at) }}</small>
+            </div>
+            <span v-if="post.category"
+                class="badge"
+                :style="{ backgroundColor: getCategoryColor(post.category), color: 'white' }">
+                {{ post.category }}
+            </span>
         </div>
-        <router-link
-            :to="`/posts/${post.post_id}`"
-            class="small text-muted">
-            View all {{ post.comments.length }} comments
-        </router-link>
-      </div>
+        <div class="card-body">
+            <h4 class="fw-bold text-dark mb-2">{{ post.title }}</h4>
+            <p class="card-text">{{ post.content }}</p>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <button
+                :disabled="!authUserId"
+                class="btn btn-sm"
+                :class="{
+                'btn-secondary': !authUserId,
+                'btn-outline-primary': authUserId && !post.liked,
+                'btn-primary': post.liked
+                }"
+                @click="authUserId && toggleLike(post)">
+                ❤️ {{ post.likes_count }}
+            </button>
+            <router-link
+                :to="`/posts/${post.post_id}`"
+                class="text-decoration-none fw-semibold">
+                View Post →
+            </router-link>
+        </div>
+        <ul v-if="post.comments && post.comments.length > 0" class="list-group list-group-flush">
+            <li v-for="comment in post.comments.slice(0, 2)"
+                :key="comment.comment_id"
+                class="list-group-item small">
+                <strong>{{ comment.user?.username ?? 'Anonymous' }}</strong>: {{ comment.content }}
+            </li>
+        </ul>
+        <div v-if="post.comments.length > 2" class="px-3 py-2">
+            <router-link :to="`/posts/${post.post_id}`" class="small text-muted">
+                View all {{ post.comments.length }} comments
+            </router-link>
+        </div>
     </div>
-  </div>
+</div>
 </template>
 
 <script setup>

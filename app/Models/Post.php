@@ -18,7 +18,7 @@ class Post extends Model
         'user_id',
         'title',
         'content',
-        'category',
+        'category_id',
         'sentiment_score',
         'status',
     ];

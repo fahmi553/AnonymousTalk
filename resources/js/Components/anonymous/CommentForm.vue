@@ -16,7 +16,10 @@
 import { ref } from 'vue'
 import axios from 'axios'
 
-const props = defineProps(['postId', 'userId'])
+const props = defineProps({
+  postId: Number,
+  userId: Number
+})
 const emit = defineEmits(['comment-submitted'])
 const content = ref('')
 
@@ -29,7 +32,7 @@ const submitComment = async () => {
       user_id: props.userId,
       content: content.value
     })
-    emit('comment-submitted', res.data)
+    emit('comment-submitted', res.data) // send new comment to parent
     content.value = ''
   } catch (err) {
     console.error('Error submitting comment', err)

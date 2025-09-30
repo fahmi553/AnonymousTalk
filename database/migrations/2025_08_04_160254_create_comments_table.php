@@ -18,8 +18,9 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->text('content');
             $table->decimal('sentiment_score', 5, 2)->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->foreign('parent_id')->references('comment_id')->on('comments')->onDelete('cascade');
             $table->timestamps();
-
             $table->foreign('post_id')->references('post_id')->on('posts')->onDelete('cascade');
             $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
         });

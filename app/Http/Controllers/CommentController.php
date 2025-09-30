@@ -22,9 +22,10 @@ class CommentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'post_id' => 'required|exists:posts,post_id',
-            'user_id' => 'required|exists:users,user_id',
-            'content' => 'required|string|max:1000',
+            'post_id'     => 'required|exists:posts,post_id',
+            'user_id'     => 'required|exists:users,user_id',
+            'content'     => 'required|string|max:1000',
+            'parent_id'   => 'nullable|exists:comments,comment_id',
         ]);
 
         $comment = Comment::create($validated);
@@ -34,6 +35,7 @@ class CommentController extends Controller
             'comment_id' => $comment->comment_id,
             'content'    => $comment->content,
             'created_at' => $comment->created_at->toISOString(),
+            'parent_id'  => $comment->parent_id,
             'user'       => [
                 'username' => $comment->user->username ?? 'Anonymous',
             ],

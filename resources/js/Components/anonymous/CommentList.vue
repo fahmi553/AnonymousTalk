@@ -1,17 +1,21 @@
 <template>
   <div class="mt-3 ps-3 comments-section" ref="commentsSection">
-    <!-- <h6>Comments</h6> -->
     <div v-if="comments.length === 0 && !loading">No comments yet.</div>
 
-    <div v-for="comment in comments" :key="comment.comment_id" class="border-top pt-2">
-      <strong>{{ comment.user?.username ?? 'Anonymous' }}</strong>:
-      <span>{{ comment.content }}</span>
-    </div>
+    <comment-item
+      v-for="comment in comments"
+      :key="comment.comment_id"
+      :comment="comment"
+      :auth-user-id="authUserId"
+      :time-ago="timeAgo"
+    />
 
     <div v-if="loading" class="text-muted small mt-2">Loading...</div>
 
     <div v-if="hasMore && !loading" class="mt-2">
-      <button class="btn btn-sm btn-outline-primary" @click="loadComments">Load More</button>
+      <button class="btn btn-sm btn-outline-primary" @click="loadComments">
+        Load More
+      </button>
     </div>
   </div>
 </template>
@@ -19,8 +23,13 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import axios from 'axios'
+import CommentItem from './CommentItem.vue'
 
-const props = defineProps({ postId: Number })
+const props = defineProps({
+  postId: Number,
+  authUserId: Number,
+  timeAgo: Function
+})
 
 const comments = ref([])
 const currentPage = ref(1)
