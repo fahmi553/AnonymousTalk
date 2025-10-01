@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@gmail.com'],
             [
-                'username' => 'admin',
+                'username' => 'Admin',
                 'password' => bcrypt('Qawsedrftgyh456@'),
                 'trust_score' => 100,
                 'role' => 'admin'
@@ -22,11 +22,11 @@ class UserSeeder extends Seeder
 
         // Regular users
         $users = [
-            ['ali@gmail.com', 'ali', 80],
-            ['sara@gmail.com', 'sara', 75],
-            ['john@gmail.com', 'john', 85],
-            ['lisa@gmail.com', 'lisa', 90],
-            ['mike@gmail.com', 'mike', 70],
+            ['ali@gmail.com', 'BraveOwl659·', 80],
+            ['sara@gmail.com', 'CleverWolf366', 75],
+            ['john@gmail.com', 'BrightWolf818', 85],
+            ['lisa@gmail.com', 'BraveEagle219', 90],
+            ['mike@gmail.com', 'MysteriousEagle726', 70],
         ];
 
         foreach ($users as [$email, $username, $score]) {

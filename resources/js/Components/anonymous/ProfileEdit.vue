@@ -11,6 +11,7 @@
             type="text"
             class="form-control"
             required
+            disabled
           />
           <button
             type="button"

@@ -32,7 +32,7 @@ const submitComment = async () => {
       user_id: props.userId,
       content: content.value
     })
-    emit('comment-submitted', res.data) // send new comment to parent
+    emit('comment-submitted', res.data)
     content.value = ''
   } catch (err) {
     console.error('Error submitting comment', err)

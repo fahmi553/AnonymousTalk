@@ -37,7 +37,10 @@ class PostSeeder extends Seeder
             "Need ideas for fun things to do with friends this weekend.",
             "Work has been really stressful lately, how do you cope?",
             "Online classes have their pros and cons, what’s your take?",
-            "I had an amazing trip last month — where should I go next?"
+            "I had an amazing trip last month — where should I go next?",
+            "Starting a new job feels exciting but also overwhelming at the same time. I’m not sure what to expect on the first day, and I’d love to hear some advice from those of you who have been in this position. How did you prepare, and what made the biggest difference in adjusting to the new environment?",
+            "Remote learning has completely changed how we approach education. While it offers flexibility and the chance to learn from anywhere, I often feel disconnected from my classmates and instructors. Sometimes, it’s hard to stay disciplined and motivated when there’s no physical classroom environment.",
+            "Traveling is one of my greatest passions. Last year, I had the opportunity to visit several countries and immerse myself in different cultures. The experiences were unforgettable, from trying new foods to learning local traditions. I’d love to hear about your travel stories as well!"
         ];
 
         for ($i = 0; $i < 20; $i++) {
@@ -45,7 +48,7 @@ class PostSeeder extends Seeder
                 'title' => $samplePosts[array_rand($samplePosts)],
                 'content' => $sampleContents[array_rand($sampleContents)],
                 'category_id' => Category::inRandomOrder()->first()->category_id,
-                'user_id' => $users->random()->user_id
+                'user_id' => $users->random()->user_id,
             ]);
         }
     }

@@ -19,26 +19,70 @@ class CommentController extends Controller
         return response()->json($comments);
     }
 
-    public function store(Request $request)
+    private function formatComment($comment)
     {
-        $validated = $request->validate([
-            'post_id'     => 'required|exists:posts,post_id',
-            'user_id'     => 'required|exists:users,user_id',
-            'content'     => 'required|string|max:1000',
-            'parent_id'   => 'nullable|exists:comments,comment_id',
-        ]);
-
-        $comment = Comment::create($validated);
-        $comment->load('user');
-
-        return response()->json([
+        return [
             'comment_id' => $comment->comment_id,
             'content'    => $comment->content,
-            'created_at' => $comment->created_at->toISOString(),
-            'parent_id'  => $comment->parent_id,
+            'created_at' => $comment->created_at,
             'user'       => [
-                'username' => $comment->user->username ?? 'Anonymous',
+                'user_id'  => $comment->user->user_id,
+                'username' => $comment->user->username,
             ],
-        ], 201);
+            'replies'    => $comment->replies->map(fn($reply) => $this->formatComment($reply))->toArray(),
+            'reply_to'   => $comment->parentComment
+                ? [
+                    'comment_id' => $comment->parentComment->comment_id,
+                    'user'       => [
+                        'user_id'  => $comment->parentComment->user->user_id,
+                        'username' => $comment->parentComment->user->username,
+                    ],
+                ]
+                : null,
+        ];
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'post_id'   => 'required|exists:posts,post_id',
+            'content'   => 'required|string',
+            'parent_id' => 'nullable|exists:comments,comment_id',
+        ]);
+
+        $comment = \App\Models\Comment::create([
+            'post_id'   => $request->post_id,
+            'user_id'   => auth()->id(),
+            'content'   => $request->content,
+            'parent_id' => $request->parent_id,
+        ]);
+
+        $comment->load(['user', 'parentComment.user', 'replies']);
+
+        return response()->json($this->formatComment($comment));
+    }
+
+    public function destroy($id)
+    {
+        $comment = Comment::findOrFail($id);
+
+        if (auth()->id() !== $comment->user_id && auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $comment->delete();
+
+        return response()->json([
+            'message'    => 'Comment deleted successfully',
+            'comment_id' => $id
+        ]);
+    }
+
+    private function deleteWithReplies($comment)
+    {
+        foreach ($comment->replies as $reply) {
+            $this->deleteWithReplies($reply);
+        }
+        $comment->delete();
     }
 }

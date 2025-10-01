@@ -129,15 +129,39 @@ class PostController extends Controller
         return view('posts.show', compact('post'));
     }
 
+    protected function formatComment($comment)
+    {
+        return [
+            'comment_id' => $comment->comment_id,
+            'content'    => $comment->content,
+            'created_at' => $comment->created_at ? $comment->created_at->toISOString() : null,
+            'user'       => [
+                'user_id'  => $comment->user->user_id ?? null,
+                'username' => $comment->user->username ?? 'Anonymous',
+            ],
+            'parent_id'  => $comment->parent_id,
+            'reply_to'   => $comment->parent_id
+                            ? optional($comment->parentComment->user)->username
+                            : null,
+            'replies'    => $comment->replies
+                                    ? $comment->replies->map(fn($reply) => $this->formatComment($reply))->values()
+                                    : [],
+        ];
+    }
+
     public function showApi($postId)
     {
         $post = Post::with([
-            'user',
-            'categoryModel',
-            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user']),
-        ])
-        ->withCount(['likes', 'comments'])
-        ->findOrFail($postId);
+                'user',
+                'categoryModel',
+                'comments' => fn($q) => $q->whereNull('parent_id')->with([
+                    'user',
+                    'replies.user',
+                    'replies.replies.user'
+                ]),
+            ])
+            ->withCount(['likes', 'comments'])
+            ->findOrFail($postId);
 
         $liked = false;
         if (auth()->check()) {
@@ -152,24 +176,33 @@ class PostController extends Controller
             'content'     => $post->content,
             'category'    => $post->categoryModel->name ?? null,
             'created_at'  => $post->created_at?->toISOString(),
-            'user'        => ['username' => $post->user->username ?? 'Anonymous'],
+            'user'        => [
+                'user_id'  => $post->user->user_id ?? null,
+                'username' => $post->user->username ?? 'Anonymous',
+            ],
             'likes_count' => $post->likes_count,
             'liked'       => $liked,
-            'comments'    => $post->comments->map(function ($comment) {
-                return [
-                    'comment_id' => $comment->comment_id,
-                    'content'    => $comment->content,
-                    'created_at' => $comment->created_at?->toISOString(),
-                    'user'       => ['username' => $comment->user->username ?? 'Anonymous'],
-                    'replies'    => $comment->replies->map(fn($reply) => [
-                        'comment_id' => $reply->comment_id,
-                        'content'    => $reply->content,
-                        'created_at' => $reply->created_at?->toISOString(),
-                        'user'       => ['username' => $reply->user->username ?? 'Anonymous'],
-                    ]),
-                ];
-            })->values(),
+            'comments'    => $post->comments->map(fn($c) => $this->formatComment($c))->values(),
         ]);
+    }
+
+    private function transformComment($comment)
+    {
+        return [
+            'comment_id' => $comment->comment_id,
+            'content'    => $comment->content,
+            'created_at' => optional($comment->created_at)->toISOString(),
+            'user'       => [
+                'username' => $comment->user->username ?? 'Anonymous',
+            ],
+            'parent_id'  => $comment->parent_id,
+            'reply_to'   => $comment->parentComment
+                ? optional($comment->parentComment->user)->username
+                : null,
+            'replies'    => $comment->replies
+                ? $comment->replies->map(fn($r) => $this->transformComment($r))
+                : [],
+        ];
     }
 
     public function toggleLike(Post $post)

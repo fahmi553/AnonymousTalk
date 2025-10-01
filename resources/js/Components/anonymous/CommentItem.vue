@@ -3,7 +3,11 @@
     <div>
       <strong>{{ comment.user.username }}</strong>
       <small class="text-muted"> • {{ formatDate(comment.created_at) }}</small>
+      <span v-if="comment.reply_to" class="text-muted">
+        ↦ replying to <strong>@{{ comment.reply_to }}</strong>
+      </span>
     </div>
+
     <div class="mb-2">
       {{ comment.content }}
     </div>
@@ -16,7 +20,8 @@
     </button>
 
     <div v-if="showReplyForm" class="mt-2">
-      <textarea v-model="replyContent" class="form-control mb-2" rows="2" placeholder="Write a reply..."></textarea>
+      <textarea v-model="replyContent" class="form-control mb-2" rows="2"
+        :placeholder="'Replying to ' + comment.user.username"></textarea>
       <button class="btn btn-primary btn-sm" @click="submitReply">Post Reply</button>
     </div>
 

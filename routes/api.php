@@ -13,6 +13,7 @@ Route::get('/posts/{postId}', [PostController::class, 'showApi']);
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
 
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
@@ -22,4 +23,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::get('/user', fn(Request $request) => $request->user());
+    Route::delete('/comments/{id}', [App\Http\Controllers\CommentController::class, 'destroy']);
 });
