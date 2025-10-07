@@ -1,94 +1,149 @@
 <template>
-  <div class="mb-4">
-    <h4>Create a New Post</h4>
-    <form @submit.prevent="submitPost" class="card p-3 shadow-sm">
-
-      <div class="mb-3">
-        <label class="form-label">Post Title</label>
-        <input
-          v-model="title"
-          type="text"
-          class="form-control"
-          :class="{ 'is-invalid': showErrors && !title.trim() }"
-        />
-        <div v-if="showErrors && !title.trim()" class="invalid-feedback">
-          Title is required.
+  <div class="container py-4" style="max-width: 650px;">
+    <div
+      v-if="showToast"
+      class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      style="z-index: 1055; min-width: 250px;"
+    >
+      <div class="d-flex">
+        <div class="toast-body">
+          ✅ Post created successfully!
         </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white me-2 m-auto"
+          @click="showToast = false"
+        ></button>
       </div>
+    </div>
 
-      <div class="mb-3">
-        <label class="form-label">Post Content</label>
-        <textarea
-          v-model="content"
-          class="form-control"
-          rows="4"
-          :class="{ 'is-invalid': showErrors && !content.trim() }"
-        ></textarea>
-        <div v-if="showErrors && !content.trim()" class="invalid-feedback">
-          Content is required.
+    <div class="card shadow-lg p-4 border-0 rounded-4">
+      <h3 class="mb-4 fw-bold text-primary">
+        <i class="fas fa-pen-nib me-2"></i> Create a New Post
+      </h3>
+
+      <form @submit.prevent="submitPost">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-heading me-2"></i> Post Title
+          </label>
+          <input
+            v-model="title"
+            type="text"
+            class="form-control"
+            :class="{ 'is-invalid': showErrors && !title.trim() }"
+          />
+          <div v-if="showErrors && !title.trim()" class="invalid-feedback">
+            Title is required.
+          </div>
         </div>
-      </div>
 
-      <div class="mb-3">
-        <label class="form-label">Category</label>
-        <select
-          v-model="category"
-          class="form-select"
-          :class="{ 'is-invalid': showErrors && !category }"
-        >
-          <option disabled value="">-- Select Category --</option>
-          <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-            {{ cat.name }}
-          </option>
-        </select>
-        <div v-if="showErrors && !category" class="invalid-feedback">
-          Category is required.
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-align-left me-2"></i> Post Content
+          </label>
+          <textarea
+            v-model="content"
+            class="form-control"
+            rows="4"
+            :class="{ 'is-invalid': showErrors && !content.trim() }"
+          ></textarea>
+          <div v-if="showErrors && !content.trim()" class="invalid-feedback">
+            Content is required.
+          </div>
         </div>
-      </div>
 
-      <button type="submit" class="btn btn-primary">
-        Post
-      </button>
-    </form>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-tags me-2"></i> Category
+          </label>
+          <select
+            v-model="category"
+            class="form-select"
+            :class="{ 'is-invalid': showErrors && !category }"
+          >
+            <option disabled value="">-- Select Category --</option>
+            <option
+              v-for="cat in categories"
+              :key="cat.category_id"
+              :value="cat.category_id"
+            >
+              {{ cat.name }}
+            </option>
+          </select>
+          <div v-if="showErrors && !category" class="invalid-feedback">
+            Category is required.
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success flex-grow-1">
+            <i class="fas fa-paper-plane me-1"></i> Post
+          </button>
+          <router-link to="/" class="btn btn-outline-secondary flex-grow-1">
+            <i class="fas fa-times me-1"></i> Cancel
+          </router-link>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { ref, onMounted } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
 
-const title = ref('')
-const content = ref('')
-const category = ref('')
-const categories = ref([])
+const router = useRouter();
 
-const showErrors = ref(false)
+const title = ref("");
+const content = ref("");
+const category = ref("");
+const categories = ref([]);
+const showErrors = ref(false);
+const showToast = ref(false);
 
 const fetchCategories = async () => {
-  const res = await axios.get('/api/categories')
-  categories.value = res.data
-}
+  try {
+    const res = await axios.get("/api/categories");
+    categories.value = res.data;
+  } catch (err) {
+    console.error("Failed to load categories", err);
+  }
+};
 
 const submitPost = async () => {
-  showErrors.value = true
+  showErrors.value = true;
 
   if (!title.value.trim() || !content.value.trim() || !category.value) {
-    return
+    return;
   }
 
-  await axios.post('/api/posts', {
-    title: title.value,
-    content: content.value,
-    category_id: category.value
-  })
+  try {
+    await axios.post("/api/posts", {
+      title: title.value,
+      content: content.value,
+      category_id: category.value,
+    });
 
-  title.value = ''
-  content.value = ''
-  category.value = ''
-  showErrors.value = false
+    title.value = "";
+    content.value = "";
+    category.value = "";
+    showErrors.value = false;
 
-  window.location.href = '/'
-}
+    showToast.value = true;
+    setTimeout(() => {
+      showToast.value = false;
+      router.push("/");
+    }, 2000);
+  } catch (err) {
+    console.error("Post failed", err);
+    alert("Failed to create post. Please try again.");
+  }
+};
 
-onMounted(fetchCategories)
+onMounted(fetchCategories);
 </script>

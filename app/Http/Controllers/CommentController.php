@@ -9,14 +9,21 @@ class CommentController extends Controller
 {
     public function index($postId)
     {
-        $perPage = request()->get('per_page', 5);
-
-        $comments = Comment::with('user')
+        $comments = Comment::with([
+                'user',
+                'parentComment.user',
+                'replies.user',
+                'replies.parentComment.user',
+                'replies.replies'
+            ])
             ->where('post_id', $postId)
+            ->whereNull('parent_id')
             ->oldest()
-            ->paginate($perPage);
+            ->get();
 
-        return response()->json($comments);
+        $payload = $comments->map(fn($c) => $this->formatComment($c));
+
+        return response()->json($payload->values());
     }
 
     private function formatComment($comment)
@@ -24,21 +31,19 @@ class CommentController extends Controller
         return [
             'comment_id' => $comment->comment_id,
             'content'    => $comment->content,
-            'created_at' => $comment->created_at,
-            'user'       => [
+            'created_at' => $comment->created_at ? $comment->created_at->toIso8601String() : null,
+            'user'       => $comment->user ? [
                 'user_id'  => $comment->user->user_id,
                 'username' => $comment->user->username,
-            ],
-            'replies'    => $comment->replies->map(fn($reply) => $this->formatComment($reply))->toArray(),
-            'reply_to'   => $comment->parentComment
-                ? [
-                    'comment_id' => $comment->parentComment->comment_id,
-                    'user'       => [
-                        'user_id'  => $comment->parentComment->user->user_id,
-                        'username' => $comment->parentComment->user->username,
-                    ],
-                ]
-                : null,
+            ] : null,
+            'parent_id'  => $comment->parent_id,
+            'reply_to'   => $comment->parentComment && $comment->parentComment->user ? [
+                'user_id'  => $comment->parentComment->user->user_id,
+                'username' => $comment->parentComment->user->username,
+            ] : null,
+            'replies'    => $comment->replies && $comment->replies->count()
+                            ? $comment->replies->map(fn($r) => $this->formatComment($r))->toArray()
+                            : [],
         ];
     }
 
@@ -50,7 +55,7 @@ class CommentController extends Controller
             'parent_id' => 'nullable|exists:comments,comment_id',
         ]);
 
-        $comment = \App\Models\Comment::create([
+        $comment = Comment::create([
             'post_id'   => $request->post_id,
             'user_id'   => auth()->id(),
             'content'   => $request->content,
@@ -64,18 +69,15 @@ class CommentController extends Controller
 
     public function destroy($id)
     {
-        $comment = Comment::findOrFail($id);
+        $comment = Comment::with('replies')->findOrFail($id);
 
         if (auth()->id() !== $comment->user_id && auth()->user()->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $comment->delete();
+        $this->deleteWithReplies($comment);
 
-        return response()->json([
-            'message'    => 'Comment deleted successfully',
-            'comment_id' => $id
-        ]);
+        return response()->json(['message' => 'Comment deleted successfully']);
     }
 
     private function deleteWithReplies($comment)

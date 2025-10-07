@@ -75,4 +75,5 @@ Route::post('/confirm-password', function (Request $request) {
     return redirect()->intended('/');
 })->middleware('auth');
 
-Route::get('/{any}', fn() => view('welcome'))->where('any', '.*');
+Route::view('/profile', 'welcome');
+Route::view('/profile/{id}', 'welcome');

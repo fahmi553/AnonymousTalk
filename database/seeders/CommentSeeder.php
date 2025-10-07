@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
+use Carbon\Carbon;
 
 class CommentSeeder extends Seeder
 {
@@ -39,11 +40,15 @@ class CommentSeeder extends Seeder
             $commentCount = rand(2, 5);
 
             for ($i = 0; $i < $commentCount; $i++) {
+                $randomTime = Carbon::now()->subDays(rand(1, 90))->subHours(rand(0, 23))->subMinutes(rand(0, 59));
+
                 $topComment = Comment::create([
                     'post_id' => $post->post_id,
                     'user_id' => $users->random()->user_id,
                     'content' => $sampleComments[array_rand($sampleComments)],
                     'parent_id' => null,
+                    'created_at' => $randomTime,
+                    'updated_at' => $randomTime->copy()->addMinutes(rand(5, 500)),
                 ]);
 
                 $this->createReplies($topComment, $users, $post, $sampleComments, 0);
@@ -60,11 +65,15 @@ class CommentSeeder extends Seeder
         $replyCount = rand(0, 3);
 
         for ($i = 0; $i < $replyCount; $i++) {
+            $randomTime = Carbon::parse($comment->created_at)->addMinutes(rand(1, 1440));
+
             $reply = Comment::create([
                 'post_id' => $post->post_id,
                 'user_id' => $users->random()->user_id,
                 'content' => $sampleComments[array_rand($sampleComments)],
                 'parent_id' => $comment->comment_id,
+                'created_at' => $randomTime,
+                'updated_at' => $randomTime->copy()->addMinutes(rand(1, 200)),
             ]);
 
             $this->createReplies($reply, $users, $post, $sampleComments, $depth + 1);

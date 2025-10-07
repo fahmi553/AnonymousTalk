@@ -14,7 +14,9 @@ import PostDetail from './Components/anonymous/PostDetail.vue'
 import LikeButton from './Components/anonymous/LikeButton.vue'
 import ProfileView from './Components/anonymous/ProfileView.vue'
 import ProfileEdit from './Components/anonymous/ProfileEdit.vue'
+// import UserProfile from './Components/anonymous/UserProfile.vue'
 import Header from './Components/anonymous/Header.vue'
+import '@fortawesome/fontawesome-free/css/all.min.css'
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -22,6 +24,7 @@ const routes = [
   { path: '/posts/:id', component: PostDetail, props: true },
   { path: '/profile', component: ProfileView, name: 'profile.view' },
   { path: '/profile/edit', component: ProfileEdit, name: 'profile.edit' },
+  { path: '/profile/:id', component: ProfileView, name: 'profile.visit', props: true },
 ]
 
 const router = createRouter({

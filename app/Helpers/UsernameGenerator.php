@@ -6,8 +6,63 @@ class UsernameGenerator
 {
     public static function generate()
     {
-        $adjectives = ['Silent', 'Loud', 'Brave', 'Mysterious', 'Quick', 'Clever', 'Hidden', 'Dark', 'Bright'];
-        $animals = ['Fox', 'Otter', 'Hawk', 'Tiger', 'Panda', 'Wolf', 'Owl', 'Bear', 'Eagle'];
+        $adjectives = [
+            'Agile',
+            'Bold',
+            'Calm',
+            'Daring',
+            'Eager',
+            'Fearless',
+            'Gentle',
+            'Honest',
+            'Intrepid',
+            'Joyful',
+            'Kind',
+            'Loyal',
+            'Mighty',
+            'Nimble',
+            'Optimistic',
+            'Patient',
+            'Quick',
+            'Resilient',
+            'Strong',
+            'Trusty',
+            'Unique',
+            'Valiant',
+            'Wise',
+            'Xenial',
+            'Young',
+            'Zesty'
+        ];
+
+        $animals = [
+            'Antelope',
+            'Bear',
+            'Cat',
+            'Dog',
+            'Eagle',
+            'Falcon',
+            'Giraffe',
+            'Horse',
+            'Iguana',
+            'Jaguar',
+            'Koala',
+            'Lion',
+            'Monkey',
+            'Newt',
+            'Owl',
+            'Penguin',
+            'Quail',
+            'Rabbit',
+            'Snake',
+            'Tiger',
+            'Urial',
+            'Vulture',
+            'Wolf',
+            'Xerus',
+            'Yak',
+            'Zebra'
+        ];
 
         $adjective = $adjectives[array_rand($adjectives)];
         $animal = $animals[array_rand($animals)];

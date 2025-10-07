@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Category;
+use Carbon\Carbon;
 
 class PostSeeder extends Seeder
 {
@@ -44,11 +45,15 @@ class PostSeeder extends Seeder
         ];
 
         for ($i = 0; $i < 20; $i++) {
+            $randomTime = Carbon::now()->subDays(rand(1, 90))->subHours(rand(0, 23))->subMinutes(rand(0, 59));
+
             Post::create([
                 'title' => $samplePosts[array_rand($samplePosts)],
                 'content' => $sampleContents[array_rand($sampleContents)],
                 'category_id' => Category::inRandomOrder()->first()->category_id,
                 'user_id' => $users->random()->user_id,
+                'created_at' => $randomTime,
+                'updated_at' => $randomTime->copy()->addMinutes(rand(5, 500))
             ]);
         }
     }

@@ -1,17 +1,38 @@
 <template>
-  <div v-if="loading">Loading post...</div>
-  <div v-else-if="error" class="text-danger">{{ error }}</div>
+  <div v-if="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2">Loading post...</p>
+  </div>
+
+  <div v-else-if="error" class="alert alert-danger">
+    {{ error }}
+  </div>
 
   <div v-else-if="post">
     <div class="card shadow-sm border-0 rounded-3 mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center mb-3">
-          <div class="fw-bold text-dark me-2">{{ post.user?.username ?? 'Anonymous' }}</div>
-          <small class="text-muted">· {{ timeAgo(post.created_at) }}</small>
+          <div
+            class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center me-2"
+            style="width: 40px; height: 40px; font-weight: bold;"
+          >
+            {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <div class="fw-bold">
+              {{ post.user?.username ?? 'Anonymous' }}
+            </div>
+            <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
+          </div>
         </div>
 
-        <div v-if="post.category" class="mb-2">
-          <span class="badge bg-secondary text-white">{{ post.category }}</span>
+        <div v-if="post.category" class="mb-3">
+          <span
+            class="badge text-white px-3 py-2"
+            :style="{ backgroundColor: getCategoryColor(post.category) }"
+          >
+            {{ post.category }}
+          </span>
         </div>
 
         <h2 class="fw-bold text-dark mb-3">{{ post.title }}</h2>
@@ -21,7 +42,7 @@
 
         <button
           :disabled="!authUserId"
-          class="btn btn-sm"
+          class="btn btn-sm d-flex align-items-center"
           :class="{
             'btn-secondary': !authUserId,
             'btn-outline-primary': authUserId && !post.liked,
@@ -29,14 +50,16 @@
           }"
           @click="authUserId && toggleLike(post)"
         >
-          ❤️ {{ post.likes_count }}
+          <i class="fas fa-heart me-1"></i> {{ post.likes_count }}
         </button>
       </div>
     </div>
 
-    <h5 class="fw-bold mb-3">Comments</h5>
+    <div class="mb-4">
+      <h5 class="fw-bold mb-3">
+        <i class="fas fa-comments me-2"></i> Comments
+      </h5>
 
-    <div class="mt-3">
       <div v-if="!loading && post.comments.length === 0" class="fst-italic text-muted mb-2">
         No comments yet. Be the first to comment!
       </div>
@@ -56,7 +79,7 @@
     <div v-if="authUserId" class="d-flex mt-3">
       <div class="me-2">
         <div
-          class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+          class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
           style="width: 40px; height: 40px; font-weight: bold;"
         >
           {{ authUserIdInitial }}
@@ -65,15 +88,16 @@
       <div class="flex-grow-1">
         <textarea
           v-model="newComment"
-          class="form-control mb-1"
+          class="form-control mb-2"
           rows="3"
           placeholder="Write a comment..."
         ></textarea>
         <button class="btn btn-sm btn-primary" @click="submitComment">
-          Comment
+            <i class="fas fa-paper-plane me-1"></i> Comment
         </button>
       </div>
     </div>
+
     <p v-else class="text-muted mt-3">
       Please <a href="/login">login</a> to comment.
     </p>
@@ -82,8 +106,10 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-3 shadow">
           <div class="modal-header border-0">
-            <h5 class="modal-title">Confirm Delete</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title">
+              <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Delete
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             Are you sure you want to delete this comment?
@@ -112,7 +138,6 @@
             type="button"
             class="btn-close btn-close-white me-2 m-auto"
             data-bs-dismiss="toast"
-            aria-label="Close"
           ></button>
         </div>
       </div>
@@ -125,6 +150,7 @@ import { ref, onMounted } from "vue"
 import { useRoute } from "vue-router"
 import axios from "axios"
 import { Modal, Toast } from "bootstrap"
+import CommentThread from "../CommentThread.vue"
 
 axios.defaults.withCredentials = true
 
@@ -142,7 +168,6 @@ const newComment = ref("")
 const deleteTargetId = ref(null)
 const deleteModal = ref(null)
 
-// Toast state
 const toastMessage = ref("")
 const toastClass = ref("bg-success")
 const toastEl = ref(null)
@@ -155,6 +180,22 @@ const showToast = (message, type = "success") => {
     toastInstance = new Toast(toastEl.value)
   }
   toastInstance.show()
+}
+
+const categories = ref([])
+
+const fetchCategories = async () => {
+  try {
+    const res = await axios.get('/api/categories')
+    categories.value = res.data
+  } catch (err) {
+    console.error('Failed to load categories', err)
+  }
+}
+
+const getCategoryColor = (categoryName) => {
+  const cat = categories.value.find(c => c.name === categoryName)
+  return cat ? cat.color_code : '#6c757d'
 }
 
 const handleDelete = (id) => {
@@ -271,119 +312,8 @@ const timeAgo = (dateStr) => {
   return "Just now"
 }
 
-onMounted(loadPost)
-</script>
-
-<script>
-import { defineComponent, ref } from "vue"
-
-export default {
-  components: {
-    CommentThread: defineComponent({
-      name: "CommentThread",
-      props: {
-        comment: { type: Object, required: true },
-        authUserId: { type: [Number, String], default: null },
-        timeAgo: { type: Function, required: true }
-      },
-      emits: ["reply", "deleted", "delete-request"],
-      setup(props, { emit }) {
-        const showReplyForm = ref(false)
-        const replyContent = ref("")
-
-        const submitReply = () => {
-          if (!replyContent.value.trim()) return
-          emit("reply", {
-            parentId: props.comment.comment_id,
-            content: replyContent.value
-          })
-          replyContent.value = ""
-          showReplyForm.value = false
-        }
-
-        const requestDelete = (id) => {
-          emit("delete-request", id)
-        }
-
-        const stripLeadingMention = (txt) => {
-          if (!txt) return txt
-          return txt.replace(/^@\S+\s+/i, "")
-        }
-
-        const propagateReply = (payload) => emit("reply", payload)
-        const propagateDeleted = (id) => emit("deleted", id)
-
-        return {
-          showReplyForm,
-          replyContent,
-          submitReply,
-          requestDelete,
-          stripLeadingMention,
-          propagateReply,
-          propagateDeleted
-        }
-      },
-      template: `
-        <div class="d-flex mb-3">
-          <div class="me-2">
-            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-              style="width: 40px; height: 40px; font-weight: bold;">
-              {{ (comment.user?.username || '?').charAt(0).toUpperCase() }}
-            </div>
-          </div>
-
-          <div class="flex-grow-1">
-            <div class="d-flex align-items-center mb-1">
-              <span class="fw-bold me-2">{{ comment.user?.username }}</span>
-              <small class="text-muted">{{ timeAgo(comment.created_at) }}</small>
-
-              <button v-if="authUserId"
-                class="btn btn-link btn-sm p-0 ms-2"
-                @click="showReplyForm = !showReplyForm">
-                Reply
-              </button>
-
-              <button v-if="authUserId == comment.user?.user_id"
-                class="btn btn-link btn-sm text-danger p-0 ms-2"
-                @click="requestDelete(comment.comment_id)">
-                Delete
-              </button>
-            </div>
-
-            <p class="mb-1">
-              <template v-if="comment.reply_to">
-                <a :href="'/user/' + comment.reply_to" class="text-primary fw-bold me-1">@{{ comment.reply_to }}</a>
-                {{ stripLeadingMention(comment.content) }}
-              </template>
-              <template v-else>
-                {{ comment.content }}
-              </template>
-            </p>
-
-            <div v-if="showReplyForm" class="mt-2 ms-4">
-              <div class="text-muted small mb-1">
-                Replying to <span class="fw-bold">@{{ comment.user?.username }}</span>
-              </div>
-              <textarea v-model="replyContent" class="form-control form-control-sm mb-1" rows="2" placeholder="Write a reply..."></textarea>
-              <button class="btn btn-sm btn-outline-primary" @click="submitReply">Submit Reply</button>
-            </div>
-
-            <div v-if="comment.replies && comment.replies.length" class="ms-4 mt-2">
-              <CommentThread
-                v-for="reply in comment.replies"
-                :key="reply.comment_id"
-                :comment="reply"
-                :auth-user-id="authUserId"
-                :time-ago="timeAgo"
-                @reply="propagateReply"
-                @deleted="propagateDeleted"
-                @delete-request="requestDelete"
-              />
-            </div>
-          </div>
-        </div>
-      `
-    })
-  }
-}
+onMounted(() => {
+  loadPost()
+  fetchCategories()
+})
 </script>

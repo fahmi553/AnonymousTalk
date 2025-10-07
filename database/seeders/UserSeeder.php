@@ -22,11 +22,11 @@ class UserSeeder extends Seeder
 
         // Regular users
         $users = [
-            ['ali@gmail.com', 'BraveOwl659·', 80],
-            ['sara@gmail.com', 'CleverWolf366', 75],
-            ['john@gmail.com', 'BrightWolf818', 85],
-            ['lisa@gmail.com', 'BraveEagle219', 90],
-            ['mike@gmail.com', 'MysteriousEagle726', 70],
+            ['ali@gmail.com', 'BoldCat596', 80],
+            ['sara@gmail.com', 'ResilientAntelope916', 75],
+            ['john@gmail.com', 'UniqueNewt25', 85],
+            ['lisa@gmail.com', 'NimbleAntelope184', 90],
+            ['mike@gmail.com', 'IntrepidGiraffe90', 70],
         ];
 
         foreach ($users as [$email, $username, $score]) {

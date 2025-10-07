@@ -1,60 +1,78 @@
 <template>
-  <div class="container" style="max-width: 600px;">
-    <h2 class="mb-4">Edit Profile</h2>
+  <div class="container py-4" style="max-width: 650px;">
+    <div class="card shadow-lg p-4 border-0 rounded-4">
+      <h3 class="mb-4 fw-bold text-primary">
+        <i class="fas fa-user-edit me-2"></i> Edit Profile
+      </h3>
 
-    <form @submit.prevent="updateProfile" class="card p-3 shadow-sm">
-      <div class="mb-3">
-        <label class="form-label">Username</label>
-        <div class="input-group">
+      <form @submit.prevent="updateProfile">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-user me-2"></i> Username
+          </label>
+          <div class="input-group">
+            <input
+              v-model="form.username"
+              type="text"
+              class="form-control"
+              disabled
+            />
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="regenerateUsername"
+            >
+              <i class="fas fa-sync-alt me-1"></i> Regenerate
+            </button>
+          </div>
+          <small class="text-muted">Your username is unique and can be refreshed here.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-envelope me-2"></i> Email
+          </label>
           <input
-            v-model="form.username"
-            type="text"
+            v-model="form.email"
+            type="email"
             class="form-control"
             required
-            disabled
           />
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            @click="regenerateUsername"
-          >
-            Regenerate
-          </button>
         </div>
-      </div>
 
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input
-          v-model="form.email"
-          type="email"
-          class="form-control"
-          required
-        />
-      </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-lock me-2"></i> New Password
+          </label>
+          <input
+            v-model="form.password"
+            type="password"
+            class="form-control"
+            placeholder="Leave blank to keep current"
+          />
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">New Password (leave blank to keep current)</label>
-        <input
-          v-model="form.password"
-          type="password"
-          class="form-control"
-        />
-      </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-check-circle me-2"></i> Confirm Password
+          </label>
+          <input
+            v-model="form.password_confirmation"
+            type="password"
+            class="form-control"
+          />
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">Confirm New Password</label>
-        <input
-          v-model="form.password_confirmation"
-          type="password"
-          class="form-control"
-        />
-      </div>
-
-      <button type="submit" class="btn btn-success">
-        Save Changes
-      </button>
-    </form>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+          <router-link to="/profile" class="btn btn-outline-secondary flex-grow-1">
+            <i class="fas fa-times me-1"></i> Cancel
+          </router-link>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 

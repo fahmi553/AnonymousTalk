@@ -15,19 +15,28 @@ use App\Helpers\UsernameGenerator;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request)
-    {
-        return response()->json([
-            'username'               => $request->user()->username,
-            'email'                  => $request->user()->email,
-            'trust_score'            => $request->user()->trust_score,
-            'role'                   => $request->user()->role,
-            'created_at'             => $request->user()->created_at->toDateTimeString(),
-            'auto_rotate_username'   => $request->user()->auto_rotate_username,
-            'rotation_interval_days' => $request->user()->rotation_interval_days,
-            'last_username_change'   => $request->user()->last_username_change,
-        ]);
+    public function show(Request $request, $id = null)
+{
+    if ($id === null) {
+        if (!$request->user()) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+        $user = $request->user();
+    } else {
+        $user = \App\Models\User::findOrFail($id);
     }
+
+    return response()->json([
+        'username'               => $user->username,
+        'email'                  => $user->email,
+        'trust_score'            => $user->trust_score,
+        'role'                   => $user->role,
+        'created_at'             => $user->created_at->toDateTimeString(),
+        'auto_rotate_username'   => $user->auto_rotate_username ?? null,
+        'rotation_interval_days' => $user->rotation_interval_days ?? null,
+        'last_username_change'   => $user->last_username_change ?? null,
+    ]);
+}
 
     public function edit()
     {
