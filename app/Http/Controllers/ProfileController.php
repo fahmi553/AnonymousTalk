@@ -16,27 +16,27 @@ use App\Helpers\UsernameGenerator;
 class ProfileController extends Controller
 {
     public function show(Request $request, $id = null)
-{
-    if ($id === null) {
-        if (!$request->user()) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+    {
+        if ($id === null) {
+            if (!$request->user()) {
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+            $user = $request->user();
+        } else {
+            $user = \App\Models\User::findOrFail($id);
         }
-        $user = $request->user();
-    } else {
-        $user = \App\Models\User::findOrFail($id);
-    }
 
-    return response()->json([
-        'username'               => $user->username,
-        'email'                  => $user->email,
-        'trust_score'            => $user->trust_score,
-        'role'                   => $user->role,
-        'created_at'             => $user->created_at->toDateTimeString(),
-        'auto_rotate_username'   => $user->auto_rotate_username ?? null,
-        'rotation_interval_days' => $user->rotation_interval_days ?? null,
-        'last_username_change'   => $user->last_username_change ?? null,
-    ]);
-}
+        return response()->json([
+            'username'               => $user->username,
+            'email'                  => $user->email,
+            'trust_score'            => $user->trust_score,
+            'role'                   => $user->role,
+            'created_at'             => $user->created_at->toDateTimeString(),
+            'auto_rotate_username'   => $user->auto_rotate_username ?? null,
+            'rotation_interval_days' => $user->rotation_interval_days ?? null,
+            'last_username_change'   => $user->last_username_change ?? null,
+        ]);
+    }
 
     public function edit()
     {

@@ -11,17 +11,19 @@
 
     <div class="flex-grow-1">
       <div class="d-flex align-items-center mb-1">
-        <router-link
-          v-if="comment.user"
-          :to="usernameLink(comment.user.user_id)"
-          class="fw-bold me-2 text-decoration-none username-link"
+        <!-- username (link only if user id exists) -->
+        <a
+          v-if="comment.user && comment.user.user_id"
+          :href="'/profile/' + comment.user.user_id"
+          class="fw-bold me-2 text-decoration-none text-dark username-link"
         >
           {{ comment.user.username }}
-        </router-link>
+        </a>
+        <span v-else-if="comment.user" class="fw-bold me-2">{{ comment.user.username }}</span>
         <span v-else class="fw-bold me-2">Anonymous</span>
 
-        <!-- dummy badge icon -->
-        <i class="fas fa-crown text-warning me-2" title="Badge"></i>
+        <!-- Dummy badge icon -->
+        <i class="fas fa-crown text-warning me-2" title="Gold Member"></i>
 
         <small class="text-muted">{{ timeAgo(comment.created_at) }}</small>
 
@@ -29,38 +31,47 @@
           v-if="authUserId"
           class="btn btn-link btn-sm p-0 ms-2"
           @click="showReplyForm = !showReplyForm"
+          type="button"
         >
           Reply
         </button>
 
         <button
-          v-if="String(authUserId) === String(comment.user?.user_id)"
+          v-if="authUserId == comment.user?.user_id"
           class="btn btn-link btn-sm text-danger p-0 ms-2"
           @click="requestDelete(comment.comment_id)"
+          type="button"
         >
           Delete
         </button>
       </div>
 
       <p class="mb-1">
-        <template v-if="comment.reply_to">
-          <router-link
-            :to="replyToLink()"
+        <template v-if="comment.reply_to && comment.reply_to_user_id">
+            <a
+            :href="'/profile/' + comment.reply_to_user_id"
             class="text-primary fw-bold me-1 text-decoration-none"
-          >
-            @{{ comment.reply_to.username }}
-          </router-link>
-          {{ stripLeadingMention(comment.content) }}
+            style="cursor: pointer; z-index: 5; position: relative;"
+            >
+            @{{ comment.reply_to }}
+            </a>
+            {{ stripLeadingMention(comment.content) }}
         </template>
+
+        <template v-else-if="comment.reply_to">
+            <span class="text-primary fw-bold me-1">@{{ comment.reply_to }}</span>
+            {{ stripLeadingMention(comment.content) }}
+        </template>
+
         <template v-else>
-          {{ comment.content }}
+            {{ comment.content }}
         </template>
-      </p>
+       </p>
 
       <!-- Reply form -->
       <div v-if="showReplyForm" class="mt-2 ms-4">
         <div class="text-muted small mb-1">
-          Replying to <span class="fw-bold">@{{ comment.user?.username }}</span>
+          Replying to <span class="fw-bold">@{{ comment.user?.username || 'Anonymous' }}</span>
         </div>
         <textarea
           v-model="replyContent"
@@ -68,7 +79,7 @@
           rows="2"
           placeholder="Write a reply..."
         ></textarea>
-        <button class="btn btn-sm btn-outline-primary" @click="submitReply">
+        <button class="btn btn-sm btn-outline-primary" @click="submitReply" type="button">
           Submit Reply
         </button>
       </div>
@@ -91,68 +102,49 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue"
+import { ref, computed, onMounted } from "vue";
 
 const props = defineProps({
   comment: { type: Object, required: true },
   authUserId: { type: [Number, String], default: null },
-  timeAgo: { type: Function, required: true }
-})
+  timeAgo: { type: Function, required: true },
+});
 
-const emit = defineEmits(["reply", "deleted", "delete-request"])
+const emit = defineEmits(["reply", "deleted", "delete-request"]);
 
-const showReplyForm = ref(false)
-const replyContent = ref("")
+const showReplyForm = ref(false);
+const replyContent = ref("");
+
+// ✅ Add this computed property
+const hasReplyTarget = computed(() => {
+  return !!(props.comment.reply_to_user_id && props.comment.reply_to);
+});
+
+// ✅ Optional: debug what Vue actually receives
+onMounted(() => {
+  console.log("Comment data:", props.comment.reply_to, props.comment.reply_to_user_id);
+});
 
 const submitReply = () => {
-  const content = replyContent.value.trim()
-  if (!content) return
-  emit("reply", {
-    parentId: props.comment.comment_id,
-    content
-  })
-  replyContent.value = ""
-  showReplyForm.value = false
-}
+  if (!replyContent.value.trim()) return;
 
-const requestDelete = (id) => emit("delete-request", id)
+  emit("reply", {
+    parent_id: props.comment.comment_id,
+    content: `@${props.comment.user?.username || ""} ${replyContent.value.trim()}`,
+  });
+
+  replyContent.value = "";
+  showReplyForm.value = false;
+};
+
+const requestDelete = (id) => emit("delete-request", id);
+const propagateReply = (payload) => emit("reply", payload);
+const propagateDeleted = (id) => emit("deleted", id);
 
 const stripLeadingMention = (txt) => {
-  if (!txt) return txt
-  return txt.replace(/^@\S+\s+/i, "")
-}
+  if (!txt) return txt;
+  return txt.replace(/^@\S+\s+/i, "");
+};
 
-const propagateReply = (payload) => emit("reply", payload)
-const propagateDeleted = (id) => emit("deleted", id)
-
-const isCurrentUser = (userId) => {
-  return String(userId) === String(window.authUserId)
-}
-
-// build user profile route path for a given user id
-const usernameLink = (userId) => {
-  return isCurrentUser(userId) ? '/profile' : `/profile/${userId}`
-}
-
-// build link for reply_to (supports new object format or legacy string)
-const replyToLink = () => {
-  const rt = props.comment.reply_to
-  if (!rt) return '/profile'
-  // if reply_to is object with user_id
-  if (typeof rt === 'object' && rt.user_id) {
-    return isCurrentUser(rt.user_id) ? '/profile' : `/profile/${rt.user_id}`
-  }
-  // legacy: reply_to might be a username string — fallback to profile root
-  return '/profile'
-}
+const isCurrentUser = (userId) => String(userId) === String(window.authUserId);
 </script>
-
-<style scoped>
-.username-link {
-  color: #000;               /* black by default */
-}
-.username-link:hover {
-  color: var(--bs-primary);  /* bootstrap primary on hover */
-  text-decoration: underline;
-}
-</style>

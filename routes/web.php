@@ -77,3 +77,4 @@ Route::post('/confirm-password', function (Request $request) {
 
 Route::view('/profile', 'welcome');
 Route::view('/profile/{id}', 'welcome');
+Route::get('/{any}', fn() => view('welcome'))->where('any', '.*');

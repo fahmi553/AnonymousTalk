@@ -21,6 +21,8 @@ class CommentController extends Controller
             ->oldest()
             ->get();
 
+        $comments->loadMissing('replies.parentComment.user', 'replies.replies.parentComment.user');
+
         $payload = $comments->map(fn($c) => $this->formatComment($c));
 
         return response()->json($payload->values());
@@ -37,13 +39,15 @@ class CommentController extends Controller
                 'username' => $comment->user->username,
             ] : null,
             'parent_id'  => $comment->parent_id,
-            'reply_to'   => $comment->parentComment && $comment->parentComment->user ? [
-                'user_id'  => $comment->parentComment->user->user_id,
-                'username' => $comment->parentComment->user->username,
-            ] : null,
+            'reply_to_user_id' => $comment->parentComment && $comment->parentComment->user
+                ? $comment->parentComment->user->user_id
+                : null,
+            'reply_to'   => $comment->parentComment && $comment->parentComment->user
+                ? $comment->parentComment->user->username
+                : null,
             'replies'    => $comment->replies && $comment->replies->count()
-                            ? $comment->replies->map(fn($r) => $this->formatComment($r))->toArray()
-                            : [],
+                ? $comment->replies->map(fn($r) => $this->formatComment($r))->toArray()
+                : [],
         ];
     }
 

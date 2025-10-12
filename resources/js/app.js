@@ -14,8 +14,8 @@ import PostDetail from './Components/anonymous/PostDetail.vue'
 import LikeButton from './Components/anonymous/LikeButton.vue'
 import ProfileView from './Components/anonymous/ProfileView.vue'
 import ProfileEdit from './Components/anonymous/ProfileEdit.vue'
-// import UserProfile from './Components/anonymous/UserProfile.vue'
 import Header from './Components/anonymous/Header.vue'
+import NotFound from './Components/anonymous/NotFound.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 
 const routes = [
@@ -25,6 +25,7 @@ const routes = [
   { path: '/profile', component: ProfileView, name: 'profile.view' },
   { path: '/profile/edit', component: ProfileEdit, name: 'profile.edit' },
   { path: '/profile/:id', component: ProfileView, name: 'profile.visit', props: true },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }, // ⬅️ add this last
 ]
 
 const router = createRouter({
@@ -43,6 +44,7 @@ app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
 
 app.mount('#app')
+
 const headerApp = createApp(Header)
 headerApp.use(router)
 headerApp.mount('#vue-header')

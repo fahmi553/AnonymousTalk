@@ -281,23 +281,23 @@ const submitComment = async () => {
   }
 }
 
-const handleReply = async ({ parentId, content }) => {
-  if (!content || !content.trim()) return
+const handleReply = async ({ parent_id, content }) => {
+  if (!content || !content.trim()) return;
   try {
-    await axios.get("/sanctum/csrf-cookie")
+    await axios.get("/sanctum/csrf-cookie");
     await axios.post("/api/comments", {
       post_id: postId,
       user_id: authUserId,
       content: content.trim(),
-      parent_id: parentId
-    })
-    await loadPost()
-    showToast("Reply added successfully", "success")
+      parent_id,
+    });
+    await loadPost();
+    showToast("Reply added successfully", "success");
   } catch (e) {
-    console.error("Failed to post reply", e)
-    showToast("Failed to post reply", "error")
+    console.error("Failed to post reply", e);
+    showToast("Failed to post reply", "error");
   }
-}
+};
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return ''

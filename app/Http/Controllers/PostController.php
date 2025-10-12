@@ -124,9 +124,19 @@ class PostController extends Controller
         return response()->json(['message' => 'Post status updated.']);
     }
 
-    public function show(Post $post)
+    public function show($id)
     {
-        return view('posts.show', compact('post'));
+        $post = Post::with([
+            'user:id,username',
+            'comments.user:id,username',
+            'comments.replies.user:id,username'
+        ])->find($id);
+
+        if (!$post) {
+            return response()->json(['error' => 'Post not found'], 404);
+        }
+
+        return response()->json($post);
     }
 
     protected function formatComment($comment)
@@ -140,6 +150,7 @@ class PostController extends Controller
                 'username' => $comment->user->username ?? 'Anonymous',
             ],
             'parent_id'  => $comment->parent_id,
+            'reply_to_user_id' => $comment->parentComment?->user?->user_id,
             'reply_to'   => $comment->parent_id
                             ? optional($comment->parentComment->user)->username
                             : null,
@@ -156,8 +167,10 @@ class PostController extends Controller
                 'categoryModel',
                 'comments' => fn($q) => $q->whereNull('parent_id')->with([
                     'user',
+                    'parentComment.user',
                     'replies.user',
-                    'replies.replies.user'
+                    'replies.parentComment.user',
+                    'replies.replies.user',
                 ]),
             ])
             ->withCount(['likes', 'comments'])

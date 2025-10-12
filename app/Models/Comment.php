@@ -34,10 +34,10 @@ class Comment extends Model
         return $this->hasMany(CommentSentimentLog::class, 'comment_id');
     }
 
-    public function replies()
+   public function replies()
     {
         return $this->hasMany(Comment::class, 'parent_id')
-                    ->with(['user', 'replies']);
+                    ->with(['user', 'replies', 'parentComment.user']);
     }
 
     public function parentComment()
