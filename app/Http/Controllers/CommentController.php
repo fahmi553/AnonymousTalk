@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comment;
 use Illuminate\Http\Request;
+use App\Models\User;
 
 class CommentController extends Controller
 {
@@ -66,6 +67,8 @@ class CommentController extends Controller
             'parent_id' => $request->parent_id,
         ]);
 
+        $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_REWARD);
+
         $comment->load(['user', 'parentComment.user', 'replies']);
 
         return response()->json($this->formatComment($comment));
@@ -73,22 +76,31 @@ class CommentController extends Controller
 
     public function destroy($id)
     {
-        $comment = Comment::with('replies')->findOrFail($id);
+        $comment = Comment::with('replies', 'user')->findOrFail($id);
 
         if (auth()->id() !== $comment->user_id && auth()->user()->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $this->deleteWithReplies($comment);
+        DB::transaction(function () use ($comment) {
+            $this->deleteWithReplies($comment);
+        });
 
         return response()->json(['message' => 'Comment deleted successfully']);
     }
 
     private function deleteWithReplies($comment)
     {
+        $comment->load('user', 'replies.user');
+
         foreach ($comment->replies as $reply) {
             $this->deleteWithReplies($reply);
         }
+
+        if ($comment->user) {
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY);
+        }
+
         $comment->delete();
     }
 }

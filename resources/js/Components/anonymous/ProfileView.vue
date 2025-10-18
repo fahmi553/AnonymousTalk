@@ -44,11 +44,11 @@
       <div class="card-body">
         <div class="d-flex justify-content-around text-center mb-4">
           <div>
-            <h5 class="mb-0">{{ user.posts_count ?? 12 }}</h5>
+            <h5 class="mb-0">{{ posts.length }}</h5>
             <small class="text-muted">Posts</small>
           </div>
           <div>
-            <h5 class="mb-0">{{ user.comments_count ?? 34 }}</h5>
+            <h5 class="mb-0">{{ comments.length }}</h5>
             <small class="text-muted">Comments</small>
           </div>
           <div>
@@ -79,16 +79,105 @@
           <strong>Joined:</strong> {{ new Date(user.created_at).toLocaleDateString() }}
         </p>
 
-        <div class="mb-3">
-          <strong>Badges:</strong>
-          <div class="d-flex gap-2 mt-2">
-            <span class="badge bg-primary">🏆 Top Contributor</span>
-            <span class="badge bg-warning">⭐ Helpful</span>
-            <span class="badge bg-success">💬 Active</span>
+        <ul class="nav nav-tabs mt-4" id="profileTabs">
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: activeTab === 'posts' }"
+              type="button"
+              @click="activeTab = 'posts'"
+            >
+              Posts
+            </button>
+          </li>
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: activeTab === 'comments' }"
+              type="button"
+              @click="activeTab = 'comments'"
+            >
+              Comments
+            </button>
+          </li>
+        </ul>
+
+        <div class="mt-3">
+          <!-- POSTS TAB -->
+          <div v-if="activeTab === 'posts'">
+            <div v-if="loadingPosts" class="text-muted small">Loading posts...</div>
+            <div v-else-if="posts.length === 0" class="text-muted small">No posts yet.</div>
+
+            <div v-else>
+              <div
+                v-for="post in posts"
+                :key="post.post_id"
+                class="border-bottom py-2 d-flex justify-content-between align-items-start"
+                :class="{ 'opacity-50': post.hidden_in_profile }"
+              >
+                <div>
+                  <router-link
+                    :to="`/posts/${post.post_id}`"
+                    class="fw-semibold text-decoration-none"
+                  >
+                    {{ post.title }}
+                  </router-link>
+                  <p class="text-muted small mb-0">
+                    {{ post.comments_count ?? 0 }} comments · {{ post.likes_count ?? 0 }} likes
+                  </p>
+                </div>
+
+                <button
+                  v-if="isSelf"
+                  class="btn btn-sm"
+                  :class="post.hidden_in_profile ? 'btn-outline-success' : 'btn-outline-secondary'"
+                  @click="togglePostVisibility(post.post_id)"
+                >
+                  <i :class="post.hidden_in_profile ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
+                  {{ post.hidden_in_profile ? 'Unhide' : 'Hide' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMMENTS TAB -->
+          <div v-else-if="activeTab === 'comments'">
+            <div v-if="loadingComments" class="text-muted small">Loading comments...</div>
+            <div v-else-if="comments.length === 0" class="text-muted small">No comments yet.</div>
+
+            <div v-else>
+              <div
+                v-for="c in comments"
+                :key="c.comment_id"
+                class="border-bottom py-2 d-flex justify-content-between align-items-start"
+                :class="{ 'opacity-50': c.hidden_in_profile }"
+              >
+                <div>
+                  <p class="mb-1">{{ c.content }}</p>
+                  <router-link
+                    v-if="c.post"
+                    :to="`/posts/${c.post.post_id}`"
+                    class="small text-muted"
+                  >
+                    On: {{ c.post.title }}
+                  </router-link>
+                </div>
+
+                <button
+                  v-if="isSelf"
+                  class="btn btn-sm"
+                  :class="c.hidden_in_profile ? 'btn-outline-success' : 'btn-outline-secondary'"
+                  @click="toggleCommentVisibility(c.comment_id)"
+                >
+                  <i :class="c.hidden_in_profile ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
+                  {{ c.hidden_in_profile ? 'Unhide' : 'Hide' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 mt-4">
           <router-link
             v-if="isSelf"
             to="/profile/edit"
@@ -96,10 +185,7 @@
           >
             <i class="fas fa-edit me-1"></i> Edit Profile
           </router-link>
-          <button
-            v-else
-            class="btn btn-outline-danger flex-grow-1"
-          >
+          <button v-else class="btn btn-outline-danger flex-grow-1">
             🚩 Report User
           </button>
         </div>
@@ -121,48 +207,80 @@ const loading = ref(true)
 const error = ref("")
 const showToast = ref(false)
 const isSelf = ref(false)
+const activeTab = ref("posts")
+
+const posts = ref([])
+const comments = ref([])
+const loadingPosts = ref(false)
+const loadingComments = ref(false)
 
 const fetchUser = async () => {
   loading.value = true
   error.value = ""
-
   try {
-    if (route.params.id) {
-      const res = await axios.get(`/api/profile/${route.params.id}`)
-      user.value = res.data
-      isSelf.value = false
-    } else {
-      const res = await axios.get(`/api/profile`)
-      user.value = res.data
-      isSelf.value = true
-    }
+    const id = route.params.id
+    const url = id ? `/api/profile/${id}` : `/api/profile`
+    const res = await axios.get(url)
+    user.value = res.data
+    const uid = id || user.value.user_id
+    isSelf.value = !id
+    await Promise.all([fetchPosts(uid), fetchComments(uid)])
   } catch (e) {
+    console.error(e)
     error.value = "Failed to load profile"
   } finally {
     loading.value = false
   }
 }
 
-onMounted(async () => {
-  await fetchUser()
-
-  if (route.query.updated) {
-    showToast.value = true
-    setTimeout(() => (showToast.value = false), 3000)
-    router.replace({
-      path: route.params.id ? `/profile/${route.params.id}` : "/profile",
-    })
+const fetchPosts = async (id) => {
+  loadingPosts.value = true
+  try {
+    const res = await axios.get(`/api/profile/${id}/posts`)
+    posts.value = res.data
+  } catch (err) {
+    posts.value = []
+  } finally {
+    loadingPosts.value = false
   }
-})
+}
 
-watch(
-  () => route.fullPath,
-  () => fetchUser()
-)
+const fetchComments = async (id) => {
+  loadingComments.value = true
+  try {
+    const res = await axios.get(`/api/profile/${id}/comments`)
+    comments.value = res.data
+  } catch (err) {
+    comments.value = []
+  } finally {
+    loadingComments.value = false
+  }
+}
+
+const togglePostVisibility = async (id) => {
+  const res = await axios.patch(`/api/posts/${id}/toggle-profile-visibility`)
+  const post = posts.value.find(p => p.post_id === id)
+  if (post) post.hidden_in_profile = res.data.hidden_in_profile
+}
+
+const toggleCommentVisibility = async (id) => {
+  const res = await axios.patch(`/api/comments/${id}/toggle-profile-visibility`)
+  const c = comments.value.find(c => c.comment_id === id)
+  if (c) c.hidden_in_profile = res.data.hidden_in_profile
+}
+
+onMounted(fetchUser)
+watch(() => route.fullPath, fetchUser)
 </script>
 
 <style scoped>
 .card {
   border-radius: 15px;
+}
+.nav-tabs .nav-link.active {
+  font-weight: 600;
+}
+.opacity-50 {
+  opacity: 0.5;
 }
 </style>

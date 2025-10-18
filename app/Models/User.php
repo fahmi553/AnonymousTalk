@@ -19,9 +19,21 @@ class User extends Authenticatable
         'trust_score',
         'role',
         'badge_id',
+        'hide_all_posts',
+        'hide_all_comments',
+    ];
+
+    protected $casts = [
+        'hide_all_posts' => 'boolean',
+        'hide_all_comments' => 'boolean',
     ];
 
     protected $hidden = ['password'];
+
+    const TRUST_SCORE_POST_REWARD = 2;
+    const TRUST_SCORE_COMMENT_REWARD = 1;
+    const TRUST_SCORE_POST_PENALTY = -2;
+    const TRUST_SCORE_COMMENT_PENALTY = -1;
 
     public function posts()
     {
@@ -58,5 +70,11 @@ class User extends Authenticatable
     public function likes()
     {
         return $this->hasMany(Like::class, 'user_id');
+    }
+
+    public function updateTrustScore($amount)
+    {
+        $this->trust_score = max(0, $this->trust_score + $amount);
+        $this->save();
     }
 }

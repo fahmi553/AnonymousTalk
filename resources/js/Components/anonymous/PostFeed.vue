@@ -159,7 +159,7 @@ const toggleLike = async (post) => {
   } catch (err) {
     console.error('Error toggling like:', err.response?.data || err);
   }
-}
+};
 
 const timeAgo = (dateStr) => new Date(dateStr).toLocaleString()
 

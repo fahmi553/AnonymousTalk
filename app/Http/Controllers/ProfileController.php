@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Helpers\UsernameGenerator;
+use App\Models\Post;
+use App\Models\Comment;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, $id = null)
+   public function show(Request $request, $id = null)
     {
         if ($id === null) {
             if (!$request->user()) {
@@ -27,14 +29,15 @@ class ProfileController extends Controller
         }
 
         return response()->json([
-            'username'               => $user->username,
-            'email'                  => $user->email,
-            'trust_score'            => $user->trust_score,
-            'role'                   => $user->role,
-            'created_at'             => $user->created_at->toDateTimeString(),
-            'auto_rotate_username'   => $user->auto_rotate_username ?? null,
-            'rotation_interval_days' => $user->rotation_interval_days ?? null,
-            'last_username_change'   => $user->last_username_change ?? null,
+            'user_id'               => $user->user_id,
+            'username'              => $user->username,
+            'email'                 => $user->email,
+            'trust_score'           => $user->trust_score,
+            'role'                  => $user->role,
+            'created_at'            => $user->created_at->toDateTimeString(),
+            'auto_rotate_username'  => $user->auto_rotate_username ?? null,
+            'rotation_interval_days'=> $user->rotation_interval_days ?? null,
+            'last_username_change'  => $user->last_username_change ?? null,
         ]);
     }
 
@@ -99,6 +102,63 @@ class ProfileController extends Controller
         return response()->json([
             'message'  => 'Username regenerated successfully',
             'username' => $user->username
+        ]);
+    }
+
+    public function userPosts($id)
+    {
+        $query = \App\Models\Post::where('user_id', $id);
+
+        if (!Auth::check() || Auth::id() != $id) {
+            $query->where('hidden_in_profile', false);
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    public function userComments($id)
+    {
+        $query = \App\Models\Comment::where('user_id', $id)
+            ->with('post:post_id,title');
+
+        if (!Auth::check() || Auth::id() != $id) {
+            $query->where('hidden_in_profile', false);
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    public function togglePostVisibility($id)
+    {
+        $post = \App\Models\Post::findOrFail($id);
+
+        if (Auth::id() !== $post->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $post->hidden_in_profile = !$post->hidden_in_profile;
+        $post->save();
+
+        return response()->json([
+            'message' => 'Post visibility updated.',
+            'hidden_in_profile' => $post->hidden_in_profile,
+        ]);
+    }
+
+    public function toggleCommentVisibility($id)
+    {
+        $comment = \App\Models\Comment::findOrFail($id);
+
+        if (Auth::id() !== $comment->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $comment->hidden_in_profile = !$comment->hidden_in_profile;
+        $comment->save();
+
+        return response()->json([
+            'message' => 'Comment visibility updated.',
+            'hidden_in_profile' => $comment->hidden_in_profile,
         ]);
     }
 }

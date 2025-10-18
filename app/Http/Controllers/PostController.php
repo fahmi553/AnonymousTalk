@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Like;
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
@@ -98,11 +99,17 @@ class PostController extends Controller
         $validated = $request->validate([
             'title'       => 'required|string|max:255',
             'content'     => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-            'user_id'     => 'required|exists:users,user_id',
+            'category_id' => 'required|exists:categories,category_id',
         ]);
 
-        $post = Post::create($validated);
+        $post = Post::create([
+            'user_id'     => auth()->id(),
+            'category_id' => $validated['category_id'],
+            'title'       => $validated['title'],
+            'content'     => $validated['content'],
+        ]);
+
+        $post->user->updateTrustScore(User::TRUST_SCORE_POST_REWARD);
 
         return response()->json([
             'post_id'    => $post->post_id,
@@ -110,6 +117,44 @@ class PostController extends Controller
             'content'    => $post->content,
             'created_at' => $post->created_at->toISOString(),
         ], 201);
+    }
+
+    public function destroy($id)
+    {
+        $post = Post::with(['comments.user', 'comments.replies.user'])->findOrFail($id);
+
+        if (auth()->id() !== $post->user_id && auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        DB::transaction(function () use ($post) {
+            foreach ($post->comments as $comment) {
+                $this->deleteCommentRecursively($comment);
+            }
+
+            if ($post->user) {
+                $post->user->updateTrustScore(User::TRUST_SCORE_POST_PENALTY);
+            }
+
+            $post->delete();
+        });
+
+        return response()->json(['message' => 'Post deleted successfully']);
+    }
+
+    private function deleteCommentRecursively($comment)
+    {
+        $comment->load('user', 'replies.user');
+
+        foreach ($comment->replies as $reply) {
+            $this->deleteCommentRecursively($reply);
+        }
+
+        if ($comment->user) {
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY);
+        }
+
+        $comment->delete();
     }
 
     public function updateStatus(Request $request, Post $post)
@@ -176,12 +221,11 @@ class PostController extends Controller
             ->withCount(['likes', 'comments'])
             ->findOrFail($postId);
 
-        $liked = false;
-        if (auth()->check()) {
-            $liked = \App\Models\Like::where('post_id', $post->post_id)
+        $liked = auth()->check()
+            ? \App\Models\Like::where('post_id', $post->post_id)
                 ->where('user_id', auth()->id())
-                ->exists();
-        }
+                ->exists()
+            : false;
 
         return response()->json([
             'post_id'     => $post->post_id,
@@ -193,7 +237,7 @@ class PostController extends Controller
                 'user_id'  => $post->user->user_id ?? null,
                 'username' => $post->user->username ?? 'Anonymous',
             ],
-            'likes_count' => $post->likes_count,
+            'likes_count' => $post->likes_count ?? $post->likes()->count(),
             'liked'       => $liked,
             'comments'    => $post->comments->map(fn($c) => $this->formatComment($c))->values(),
         ]);
@@ -217,30 +261,4 @@ class PostController extends Controller
                 : [],
         ];
     }
-
-    public function toggleLike(Post $post)
-    {
-        $userId = auth()->id();
-        $existing = Like::where('post_id', $post->post_id)
-                        ->where('user_id', $userId)
-                        ->first();
-
-        if ($existing) {
-            $existing->delete();
-            $liked = false;
-        } else {
-            Like::create([
-                'post_id' => $post->post_id,
-                'user_id' => $userId,
-            ]);
-            $liked = true;
-        }
-        $likesCount = $post->likes()->count();
-
-        return response()->json([
-            'liked' => $liked,
-            'likes_count' => $likesCount,
-        ]);
-    }
-
 }

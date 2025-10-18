@@ -1,144 +1,165 @@
 <template>
-  <div v-if="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2">Loading post...</p>
-  </div>
+  <div class="container my-4 my-md-5">
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+      <p class="mt-3 text-muted">Loading post...</p>
+    </div>
 
-  <div v-else-if="error" class="alert alert-danger">
-    {{ error }}
-  </div>
+    <div v-else-if="error" class="alert alert-danger shadow-sm">
+      <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+    </div>
 
-  <div v-else-if="post">
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <div
-            class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center me-2"
-            style="width: 40px; height: 40px; font-weight: bold;"
-          >
-            {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
-          </div>
-          <div>
-            <div class="fw-bold">
-              {{ post.user?.username ?? 'Anonymous' }}
+    <div v-else-if="post">
+      <div class="card shadow-sm border-0 rounded-lg mb-4">
+        <div class="card-body p-4 p-md-5">
+          <div class="d-flex align-items-center mb-4">
+            <div
+              class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+              style="width: 50px; height: 50px; font-size: 1.25rem; font-weight: 500;"
+            >
+              {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
             </div>
-            <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
+            <div class="flex-grow-1">
+              <div class="fw-bold fs-5 text-dark">
+                {{ post.user?.username ?? 'Anonymous' }}
+              </div>
+              <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
+            </div>
+          </div>
+
+          <div v-if="post.category" class="mb-3">
+            <span
+              class="badge rounded-pill px-3 py-2 fs-6 shadow-sm"
+              :style="{ backgroundColor: getCategoryColor(post.category) }"
+            >
+              {{ post.category }}
+            </span>
+          </div>
+
+          <h1 class="fw-bold text-dark mb-3">{{ post.title }}</h1>
+          <p class="fs-5 text-secondary" style="white-space: pre-line;">
+            {{ post.content }}
+          </p>
+
+          <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+            <button
+              :disabled="!authUserId"
+              class="btn d-flex align-items-center rounded-pill px-3 py-2"
+              :class="{
+                'btn-light text-muted': !authUserId,
+                'btn-outline-danger': authUserId && !post.liked,
+                'btn-danger': authUserId && post.liked
+              }"
+              @click="authUserId && toggleLike(post)"
+            >
+              <i class="fas fa-heart me-2"></i>
+              <span class="fw-bold">{{ post.likes_count }}</span>
+            </button>
+
+            <button
+              v-if="authUserId && post.user?.user_id == authUserId"
+              class="btn btn-outline-secondary d-flex align-items-center rounded-pill px-3 py-2"
+              @click="openDeletePostModal"
+            >
+              <i class="fas fa-trash-alt me-2"></i>
+              <span>Delete Post</span>
+            </button>
           </div>
         </div>
+      </div>
 
-        <div v-if="post.category" class="mb-3">
-          <span
-            class="badge text-white px-3 py-2"
-            :style="{ backgroundColor: getCategoryColor(post.category) }"
-          >
-            {{ post.category }}
-          </span>
+      <div class="mt-5">
+        <h4 class="fw-bold mb-3">
+          <i class="fas fa-comments me-2 text-primary"></i> Comments
+        </h4>
+
+        <div v-if="authUserId" class="d-flex mt-3 mb-4">
+          <div class="me-3 flex-shrink-0">
+            <div
+              class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
+              style="width: 40px; height: 40px; font-weight: bold;"
+            >
+              {{ authUserIdInitial }}
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <textarea
+              v-model="newComment"
+              class="form-control mb-2"
+              rows="3"
+              placeholder="Write a comment..."
+            ></textarea>
+            <button class="btn btn-sm btn-primary" @click="submitComment">
+              <i class="fas fa-paper-plane me-1"></i> Submit Comment
+            </button>
+          </div>
         </div>
-
-        <h2 class="fw-bold text-dark mb-3">{{ post.title }}</h2>
-        <p class="fs-5 text-secondary mb-4" style="white-space: pre-line;">
-          {{ post.content }}
+        <p v-else class="text-muted mt-3 alert alert-secondary">
+          Please <a href="/login" class="fw-bold">login</a> to comment on this post.
         </p>
 
-        <button
-          :disabled="!authUserId"
-          class="btn btn-sm d-flex align-items-center"
-          :class="{
-            'btn-secondary': !authUserId,
-            'btn-outline-primary': authUserId && !post.liked,
-            'btn-primary': post.liked
-          }"
-          @click="authUserId && toggleLike(post)"
-        >
-          <i class="fas fa-heart me-1"></i> {{ post.likes_count }}
-        </button>
-      </div>
-    </div>
-
-    <div class="mb-4">
-      <h5 class="fw-bold mb-3">
-        <i class="fas fa-comments me-2"></i> Comments
-      </h5>
-
-      <div v-if="!loading && post.comments.length === 0" class="fst-italic text-muted mb-2">
-        No comments yet. Be the first to comment!
-      </div>
-
-      <CommentThread
-        v-for="comment in post.comments"
-        :key="comment.comment_id"
-        :comment="comment"
-        :auth-user-id="authUserId"
-        :time-ago="timeAgo"
-        @reply="handleReply"
-        @deleted="handleDelete"
-        @delete-request="openDeleteModal"
-      />
-    </div>
-
-    <div v-if="authUserId" class="d-flex mt-3">
-      <div class="me-2">
-        <div
-          class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
-          style="width: 40px; height: 40px; font-weight: bold;"
-        >
-          {{ authUserIdInitial }}
+        <div v-if="!loading && post.comments.length === 0" class="fst-italic text-muted my-4">
+          No comments yet. Be the first to comment!
         </div>
-      </div>
-      <div class="flex-grow-1">
-        <textarea
-          v-model="newComment"
-          class="form-control mb-2"
-          rows="3"
-          placeholder="Write a comment..."
-        ></textarea>
-        <button class="btn btn-sm btn-primary" @click="submitComment">
-            <i class="fas fa-paper-plane me-1"></i> Comment
-        </button>
-      </div>
-    </div>
 
-    <p v-else class="text-muted mt-3">
-      Please <a href="/login">login</a> to comment.
-    </p>
+        <CommentThread
+          v-for="comment in post.comments"
+          :key="comment.comment_id"
+          :comment="comment"
+          :auth-user-id="authUserId"
+          :time-ago="timeAgo"
+          @reply="handleReply"
+          @deleted="handleDelete"
+          @delete-request="openDeleteModal"
+        />
+      </div>
 
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModal">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow">
-          <div class="modal-header border-0">
-            <h5 class="modal-title">
-              <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Delete
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            Are you sure you want to delete this comment?
-          </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-danger" @click="confirmDelete">Delete</button>
+      <div class="modal fade" id="deletePostModal" tabindex="-1" aria-hidden="true" ref="deletePostModal">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-3 shadow">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to delete this post? All comments will be deleted as well. This action cannot be undone.
+            </div>
+            <div class="modal-footer border-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-danger" @click="confirmDeletePost">Delete Post</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-      <div
-        id="liveToast"
-        class="toast align-items-center text-white border-0"
-        :class="toastClass"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-        ref="toastEl"
-      >
-        <div class="d-flex">
-          <div class="toast-body">{{ toastMessage }}</div>
-          <button
-            type="button"
-            class="btn-close btn-close-white me-2 m-auto"
-            data-bs-dismiss="toast"
-          ></button>
+      <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModal">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-3 shadow">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Delete
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to delete this comment?
+            </div>
+            <div class="modal-footer border-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-danger" @click="confirmDelete">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" :class="toastClass" role="alert" aria-live="assertive" aria-atomic="true" ref="toastEl">
+          <div class="d-flex">
+            <div class="toast-body">{{ toastMessage }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
         </div>
       </div>
     </div>
@@ -172,6 +193,12 @@ const toastMessage = ref("")
 const toastClass = ref("bg-success")
 const toastEl = ref(null)
 let toastInstance = null
+const deletePostModal = ref(null)
+
+const openDeletePostModal = () => {
+  const modal = new Modal(deletePostModal.value)
+  modal.show()
+}
 
 const showToast = (message, type = "success") => {
   toastMessage.value = message
@@ -190,6 +217,24 @@ const fetchCategories = async () => {
     categories.value = res.data
   } catch (err) {
     console.error('Failed to load categories', err)
+  }
+}
+
+const confirmDeletePost = async () => {
+  try {
+    await axios.get("/sanctum/csrf-cookie")
+    await axios.delete(`/api/posts/${postId}`)
+    showToast("Post deleted successfully", "success")
+    const modal = Modal.getInstance(deletePostModal.value)
+    modal.hide()
+    setTimeout(() => {
+      window.location.href = "/"
+    }, 1000)
+  } catch (e) {
+    console.error("Failed to delete post:", e.response?.data || e)
+    showToast("Failed to delete post", "error")
+    const modal = Modal.getInstance(deletePostModal.value)
+    modal.hide()
   }
 }
 
@@ -252,16 +297,16 @@ const loadPost = async () => {
   }
 }
 
-const toggleLike = async (postItem) => {
+const toggleLike = async (post) => {
   try {
-    await axios.get("/sanctum/csrf-cookie")
-    const res = await axios.post(`/api/posts/${postItem.post_id}/toggle-like`)
-    postItem.liked = res.data.liked
-    postItem.likes_count = res.data.likes_count
+    await axios.get('/sanctum/csrf-cookie');
+    const res = await axios.post(`/api/posts/${post.post_id}/toggle-like`);
+    post.liked = res.data.liked;
+    post.likes_count = res.data.likes_count;
   } catch (err) {
-    console.error("Error toggling like:", err.response?.data || err)
+    console.error('Error toggling like:', err.response?.data || err);
   }
-}
+};
 
 const submitComment = async () => {
   if (!newComment.value.trim()) return

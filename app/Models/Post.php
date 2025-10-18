@@ -21,6 +21,11 @@ class Post extends Model
         'category_id',
         'sentiment_score',
         'status',
+        'hidden_in_profile',
+    ];
+
+    protected $casts = [
+        'hidden_in_profile' => 'boolean',
     ];
 
     public function user()
@@ -51,5 +56,10 @@ class Post extends Model
     public function likes()
     {
         return $this->hasMany(Like::class, 'post_id');
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'post_id';
     }
 }

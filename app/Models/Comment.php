@@ -17,6 +17,11 @@ class Comment extends Model
         'content',
         'sentiment_score',
         'parent_id',
+        'hidden_in_profile',
+    ];
+
+    protected $casts = [
+        'hidden_in_profile' => 'boolean',
     ];
 
     public function post()

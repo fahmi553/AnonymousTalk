@@ -25,7 +25,7 @@ const routes = [
   { path: '/profile', component: ProfileView, name: 'profile.view' },
   { path: '/profile/edit', component: ProfileEdit, name: 'profile.edit' },
   { path: '/profile/:id', component: ProfileView, name: 'profile.visit', props: true },
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }, // ⬅️ add this last
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
 const router = createRouter({

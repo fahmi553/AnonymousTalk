@@ -14,13 +14,16 @@ Route::get('/posts/{postId}', [PostController::class, 'showApi']);
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.visit');
+Route::get('/profile/{id}/posts', [ProfileController::class, 'userPosts']);
+Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     // Posts
     Route::post('/posts', [PostController::class, 'store']);
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
-    Route::post('/posts/{post}/toggle-like', [LikeController::class, 'toggleLike']);
+    Route::post('/posts/{postId}/toggle-like', [LikeController::class, 'toggleLike']);
+    Route::delete('/posts/{id}', [PostController::class, 'destroy'])->middleware('auth:sanctum');
 
     // Comments
     Route::post('/comments', [CommentController::class, 'store']);
@@ -30,6 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
+    Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
+    Route::patch('/comments/{id}/toggle-profile-visibility', [ProfileController::class, 'toggleCommentVisibility']);
 
     // Auth user info
     Route::get('/user', fn(Request $request) => $request->user());
