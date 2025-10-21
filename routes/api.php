@@ -23,7 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
     Route::post('/posts/{postId}/toggle-like', [LikeController::class, 'toggleLike']);
-    Route::delete('/posts/{id}', [PostController::class, 'destroy'])->middleware('auth:sanctum');
+    Route::delete('/posts/{id}', [PostController::class, 'destroy']);
 
     // Comments
     Route::post('/comments', [CommentController::class, 'store']);
@@ -35,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
     Route::patch('/comments/{id}/toggle-profile-visibility', [ProfileController::class, 'toggleCommentVisibility']);
+    Route::post('/profile/toggle-hide-posts', [ProfileController::class, 'toggleHideAllPosts']);
+    Route::post('/profile/toggle-hide-comments', [ProfileController::class, 'toggleHideAllComments']);
 
     // Auth user info
     Route::get('/user', fn(Request $request) => $request->user());

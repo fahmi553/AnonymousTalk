@@ -17,27 +17,43 @@ use App\Models\Comment;
 
 class ProfileController extends Controller
 {
-   public function show(Request $request, $id = null)
+    public function show(Request $request, $id = null)
     {
-        if ($id === null) {
-            if (!$request->user()) {
+        if ($id) {
+            $profileUser = \App\Models\User::with(['badges'])->findOrFail($id);
+        } else {
+            $profileUser = $request->user();
+            if (!$profileUser) {
                 return response()->json(['error' => 'Unauthenticated'], 401);
             }
-            $user = $request->user();
+        }
+
+        $authUser = auth()->user();
+        $isOwner = $authUser && $authUser->user_id === $profileUser->user_id;
+
+        $postsQuery = $profileUser->posts();
+        if (!$isOwner && $profileUser->hide_all_posts) {
+            $posts = collect();
         } else {
-            $user = \App\Models\User::findOrFail($id);
+            $posts = $postsQuery->where('hidden_in_profile', false)
+                ->latest()
+                ->get();
+        }
+
+        $commentsQuery = $profileUser->comments();
+        if (!$isOwner && $profileUser->hide_all_comments) {
+            $comments = collect();
+        } else {
+            $comments = $commentsQuery->where('hidden_in_profile', false)
+                ->latest()
+                ->get();
         }
 
         return response()->json([
-            'user_id'               => $user->user_id,
-            'username'              => $user->username,
-            'email'                 => $user->email,
-            'trust_score'           => $user->trust_score,
-            'role'                  => $user->role,
-            'created_at'            => $user->created_at->toDateTimeString(),
-            'auto_rotate_username'  => $user->auto_rotate_username ?? null,
-            'rotation_interval_days'=> $user->rotation_interval_days ?? null,
-            'last_username_change'  => $user->last_username_change ?? null,
+            'user' => $profileUser,
+            'is_owner' => $isOwner,
+            'posts' => $posts,
+            'comments' => $comments,
         ]);
     }
 
@@ -159,6 +175,36 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Comment visibility updated.',
             'hidden_in_profile' => $comment->hidden_in_profile,
+        ]);
+    }
+
+    public function toggleHideAllPosts()
+    {
+        $user = auth()->user();
+        $user->hide_all_posts = !$user->hide_all_posts;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'hide_all_posts' => $user->hide_all_posts,
+            'message' => $user->hide_all_posts
+                ? 'All posts are now hidden from your profile.'
+                : 'All posts are now visible on your profile.'
+        ]);
+    }
+
+    public function toggleHideAllComments()
+    {
+        $user = auth()->user();
+        $user->hide_all_comments = !$user->hide_all_comments;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'hide_all_comments' => $user->hide_all_comments,
+            'message' => $user->hide_all_comments
+                ? 'All comments are now hidden from your profile.'
+                : 'All comments are now visible on your profile.'
         ]);
     }
 }
