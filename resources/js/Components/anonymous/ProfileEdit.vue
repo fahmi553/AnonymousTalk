@@ -94,13 +94,14 @@ const form = ref({
 
 const fetchProfile = async () => {
   try {
-    const res = await axios.get("/api/profile");
-    form.value.username = res.data.username;
-    form.value.email = res.data.email;
+    const res = await axios.get("/api/profile")
+    const user = res.data.user || res.data
+    form.value.username = user.username
+    form.value.email = user.email
   } catch (err) {
-    console.error("Failed to load profile", err);
+    console.error("Failed to load profile", err)
   }
-};
+}
 
 const updateProfile = async () => {
   try {

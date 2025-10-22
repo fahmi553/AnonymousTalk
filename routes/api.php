@@ -14,8 +14,8 @@ Route::get('/posts/{postId}', [PostController::class, 'showApi']);
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.visit');
-Route::get('/profile/{id}/posts', [ProfileController::class, 'userPosts']);
-Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
+// Route::get('/profile/{id}/posts', [ProfileController::class, 'userPosts']);
+// Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {

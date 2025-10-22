@@ -1,6 +1,5 @@
 <template>
   <div class="container" style="max-width: 700px;">
-    <!-- ✅ Toast -->
     <div
       v-if="showToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
@@ -15,11 +14,9 @@
       </div>
     </div>
 
-    <!-- ✅ Loading/Error -->
     <div v-if="loading" class="text-center mt-5">Loading profile...</div>
     <div v-else-if="error" class="text-danger mt-5">{{ error }}</div>
 
-    <!-- ✅ Profile -->
     <div v-else-if="user" class="card shadow-lg border-0 overflow-hidden">
       <div class="p-4 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="d-flex align-items-center">
@@ -38,7 +35,6 @@
       </div>
 
       <div class="card-body">
-        <!-- ✅ Stats -->
         <div class="d-flex justify-content-around text-center mb-4">
           <div>
             <h5 class="mb-0">{{ posts.length }}</h5>
@@ -54,7 +50,6 @@
           </div>
         </div>
 
-        <!-- ✅ Trust Score -->
         <div class="mb-3">
           <label class="form-label"><strong>Trust Score:</strong></label>
           <div class="progress" style="height: 20px;">
@@ -71,7 +66,6 @@
           </div>
         </div>
 
-        <!-- ✅ Basic Info -->
         <p><i class="fas fa-user-shield me-2"></i><strong>Role:</strong> {{ user.role || 'User' }}</p>
         <p>
           <i class="fas fa-calendar-alt me-2"></i>
@@ -79,7 +73,6 @@
           {{ formatDate(user.created_at) }}
         </p>
 
-        <!-- ✅ Hide All Toggles -->
         <div v-if="isSelf" class="mt-3 d-flex gap-2">
           <button
             class="btn btn-outline-secondary flex-grow-1"
@@ -100,7 +93,6 @@
           </button>
         </div>
 
-        <!-- ✅ Tabs -->
         <ul class="nav nav-tabs mt-4" id="profileTabs">
           <li class="nav-item">
             <button
@@ -124,7 +116,6 @@
           </li>
         </ul>
 
-        <!-- ✅ Posts -->
         <div class="mt-3" v-if="activeTab === 'posts'">
           <div v-if="loadingPosts" class="text-muted small">Loading posts...</div>
           <div v-else-if="posts.length === 0" class="text-muted small">No posts yet.</div>
@@ -161,7 +152,6 @@
           </div>
         </div>
 
-        <!-- ✅ Comments -->
         <div class="mt-3" v-else-if="activeTab === 'comments'">
           <div v-if="loadingComments" class="text-muted small">Loading comments...</div>
           <div v-else-if="comments.length === 0" class="text-muted small">No comments yet.</div>
@@ -197,7 +187,6 @@
           </div>
         </div>
 
-        <!-- ✅ Footer -->
         <div class="d-flex gap-2 mt-4">
           <router-link
             v-if="isSelf"
@@ -248,10 +237,11 @@ const fetchUser = async () => {
     const id = route.params.id
     const url = id ? `/api/profile/${id}` : `/api/profile`
     const res = await axios.get(url)
-    user.value = res.data
-    const uid = id || user.value.user_id
-    isSelf.value = !id
-    await Promise.all([fetchPosts(uid), fetchComments(uid)])
+
+    user.value = res.data.user
+    isSelf.value = res.data.is_owner
+    posts.value = Array.isArray(res.data.posts) ? res.data.posts : []
+    comments.value = Array.isArray(res.data.comments) ? res.data.comments : []
   } catch (e) {
     console.error(e)
     error.value = "Failed to load profile"
@@ -294,26 +284,35 @@ const toggleCommentVisibility = async (id) => {
 
 const toggleHideAll = async (type) => {
   try {
+    let res;
+
     if (type === "posts") {
-      loadingPostsToggle.value = true
-      const res = await axios.post("/api/profile/toggle-hide-all-posts")
-      user.value.hide_all_posts = res.data.hide_all_posts
-      toastMessage.value = res.data.message
-    } else {
-      loadingCommentsToggle.value = true
-      const res = await axios.post("/api/profile/toggle-hide-all-comments")
-      user.value.hide_all_comments = res.data.hide_all_comments
-      toastMessage.value = res.data.message
+      loadingPostsToggle.value = true;
+      res = await axios.post("/api/profile/toggle-hide-all-posts");
+      user.value.hide_all_posts = res.data.hide_all_posts;
+
+      // Reflect changes visually
+      posts.value.forEach(p => (p.hidden_in_profile = user.value.hide_all_posts));
+    } 
+    else if (type === "comments") {
+      loadingCommentsToggle.value = true;
+      res = await axios.post("/api/profile/toggle-hide-all-comments");
+      user.value.hide_all_comments = res.data.hide_all_comments;
+
+      // Reflect changes visually
+      comments.value.forEach(c => (c.hidden_in_profile = user.value.hide_all_comments));
     }
-    showToast.value = true
-    setTimeout(() => (showToast.value = false), 3000)
+
+    toastMessage.value = res.data.message;
+    showToast.value = true;
+    setTimeout(() => (showToast.value = false), 3000);
   } catch (err) {
-    console.error(`Error toggling ${type}:`, err)
+    console.error(`Error toggling ${type}:`, err);
   } finally {
-    loadingPostsToggle.value = false
-    loadingCommentsToggle.value = false
+    loadingPostsToggle.value = false;
+    loadingCommentsToggle.value = false;
   }
-}
+};
 
 onMounted(fetchUser)
 watch(() => route.fullPath, fetchUser)
