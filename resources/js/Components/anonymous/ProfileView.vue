@@ -41,7 +41,7 @@
             <small class="text-muted">Posts</small>
           </div>
           <div>
-            <h5 class="mb-0">{{ comments.length }}</h5>
+            <h5 class="mb-0">{{ comment_count }}</h5>
             <small class="text-muted">Comments</small>
           </div>
           <div>
@@ -82,15 +82,6 @@
             <i class="fas" :class="user.hide_all_posts ? 'fa-eye' : 'fa-eye-slash'"></i>
             {{ user.hide_all_posts ? 'Show All Posts' : 'Hide All Posts' }}
           </button>
-
-          <button
-            class="btn btn-outline-secondary flex-grow-1"
-            @click="toggleHideAll('comments')"
-            :disabled="loadingCommentsToggle"
-          >
-            <i class="fas" :class="user.hide_all_comments ? 'fa-eye' : 'fa-eye-slash'"></i>
-            {{ user.hide_all_comments ? 'Show All Comments' : 'Hide All Comments' }}
-          </button>
         </div>
 
         <ul class="nav nav-tabs mt-4" id="profileTabs">
@@ -104,7 +95,8 @@
               Posts
             </button>
           </li>
-          <li class="nav-item">
+
+          <li class="nav-item" v-if="isSelf">
             <button
               class="nav-link"
               :class="{ active: activeTab === 'comments' }"
@@ -152,41 +144,34 @@
           </div>
         </div>
 
-        <div class="mt-3" v-else-if="activeTab === 'comments'">
+        <div class="mt-3" v-else-if="activeTab === 'comments' && isSelf">
+          <div class="alert alert-info small text-center rounded-3 mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Only you can see your comment history.
+          </div>
+
           <div v-if="loadingComments" class="text-muted small">Loading comments...</div>
-          <div v-else-if="comments.length === 0" class="text-muted small">No comments yet.</div>
+          <div v-else-if="comments.length === 0" class="text-muted small">
+            You haven’t made any comments yet.
+          </div>
 
           <div v-else>
             <div
               v-for="c in comments"
               :key="c.comment_id"
-              class="border-bottom py-2 d-flex justify-content-between align-items-start"
-              :class="{ 'opacity-50': c.hidden_in_profile }"
+              class="border-bottom py-2"
             >
-              <div>
-                <p class="mb-1">{{ c.content }}</p>
-                <router-link
-                  v-if="c.post"
-                  :to="`/posts/${c.post.post_id}`"
-                  class="small text-muted"
-                >
-                  On: {{ c.post.title || 'Post' }}
-                </router-link>
-              </div>
-
-              <button
-                v-if="isSelf"
-                class="btn btn-sm"
-                :class="c.hidden_in_profile ? 'btn-outline-success' : 'btn-outline-secondary'"
-                @click="toggleCommentVisibility(c.comment_id)"
+              <p class="mb-1">{{ c.content }}</p>
+              <router-link
+                v-if="c.post"
+                :to="`/posts/${c.post.post_id}`"
+                class="small text-muted"
               >
-                <i :class="c.hidden_in_profile ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
-                {{ c.hidden_in_profile ? 'Unhide' : 'Hide' }}
-              </button>
+                On: {{ c.post.title || 'Post' }}
+              </router-link>
             </div>
           </div>
         </div>
-
         <div class="d-flex gap-2 mt-4">
           <router-link
             v-if="isSelf"
@@ -203,7 +188,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue"
+import { ref, onMounted, watch, computed } from "vue"
 import { useRoute } from "vue-router"
 import axios from "axios"
 
@@ -222,7 +207,8 @@ const comments = ref([])
 const loadingPosts = ref(false)
 const loadingComments = ref(false)
 const loadingPostsToggle = ref(false)
-const loadingCommentsToggle = ref(false)
+
+const comment_count = ref(0)
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "Unknown"
@@ -241,32 +227,12 @@ const fetchUser = async () => {
     user.value = res.data.user
     isSelf.value = res.data.is_owner
     posts.value = Array.isArray(res.data.posts) ? res.data.posts : []
-    comments.value = Array.isArray(res.data.comments) ? res.data.comments : []
+    comment_count.value = res.data.comment_count ?? 0
   } catch (e) {
     console.error(e)
     error.value = "Failed to load profile"
   } finally {
     loading.value = false
-  }
-}
-
-const fetchPosts = async (id) => {
-  loadingPosts.value = true
-  try {
-    const res = await axios.get(`/api/profile/${id}/posts`)
-    posts.value = Array.isArray(res.data) ? res.data : []
-  } finally {
-    loadingPosts.value = false
-  }
-}
-
-const fetchComments = async (id) => {
-  loadingComments.value = true
-  try {
-    const res = await axios.get(`/api/profile/${id}/comments`)
-    comments.value = Array.isArray(res.data) ? res.data : []
-  } finally {
-    loadingComments.value = false
   }
 }
 
@@ -276,43 +242,21 @@ const togglePostVisibility = async (id) => {
   if (post) post.hidden_in_profile = res.data.hidden_in_profile
 }
 
-const toggleCommentVisibility = async (id) => {
-  const res = await axios.patch(`/api/comments/${id}/toggle-profile-visibility`)
-  const c = comments.value.find(c => c.comment_id === id)
-  if (c) c.hidden_in_profile = res.data.hidden_in_profile
-}
-
-const toggleHideAll = async (type) => {
+const toggleHideAll = async () => {
   try {
-    let res;
-
-    if (type === "posts") {
-      loadingPostsToggle.value = true;
-      res = await axios.post("/api/profile/toggle-hide-all-posts");
-      user.value.hide_all_posts = res.data.hide_all_posts;
-
-      // Reflect changes visually
-      posts.value.forEach(p => (p.hidden_in_profile = user.value.hide_all_posts));
-    } 
-    else if (type === "comments") {
-      loadingCommentsToggle.value = true;
-      res = await axios.post("/api/profile/toggle-hide-all-comments");
-      user.value.hide_all_comments = res.data.hide_all_comments;
-
-      // Reflect changes visually
-      comments.value.forEach(c => (c.hidden_in_profile = user.value.hide_all_comments));
-    }
-
-    toastMessage.value = res.data.message;
-    showToast.value = true;
-    setTimeout(() => (showToast.value = false), 3000);
+    loadingPostsToggle.value = true
+    const res = await axios.post("/api/profile/toggle-hide-all-posts")
+    user.value.hide_all_posts = res.data.hide_all_posts
+    posts.value.forEach(p => (p.hidden_in_profile = user.value.hide_all_posts))
+    toastMessage.value = res.data.message
+    showToast.value = true
+    setTimeout(() => (showToast.value = false), 3000)
   } catch (err) {
-    console.error(`Error toggling ${type}:`, err);
+    console.error("Error toggling posts:", err)
   } finally {
-    loadingPostsToggle.value = false;
-    loadingCommentsToggle.value = false;
+    loadingPostsToggle.value = false
   }
-};
+}
 
 onMounted(fetchUser)
 watch(() => route.fullPath, fetchUser)

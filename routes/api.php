@@ -34,9 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
-    Route::patch('/comments/{id}/toggle-profile-visibility', [ProfileController::class, 'toggleCommentVisibility']);
-    Route::post('/profile/toggle-hide-posts', [ProfileController::class, 'toggleHideAllPosts']);
-    Route::post('/profile/toggle-hide-comments', [ProfileController::class, 'toggleHideAllComments']);
+    Route::post('/profile/toggle-hide-all-posts', [ProfileController::class, 'toggleHideAllPosts']);
 
     // Auth user info
     Route::get('/user', fn(Request $request) => $request->user());
