@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
+use App\Models\User;
 
 Route::get('/', fn() => view('welcome'));
 
@@ -77,4 +78,6 @@ Route::post('/confirm-password', function (Request $request) {
 
 Route::view('/profile', 'welcome');
 Route::view('/profile/{id}', 'welcome');
-Route::get('/{any}', fn() => view('welcome'))->where('any', '.*');
+Route::get('/{any}', function () {
+    return view('welcome');
+})->where('any', '^(?!api).*$');

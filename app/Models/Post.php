@@ -62,4 +62,9 @@ class Post extends Model
     {
         return 'post_id';
     }
+
+    public function scopeVisible($query)
+    {
+        return $query->where('status', 'visible');
+    }
 }

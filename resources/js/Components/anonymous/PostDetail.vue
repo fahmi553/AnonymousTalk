@@ -10,7 +10,7 @@
     </div>
 
     <div v-else-if="post">
-      <div class="card shadow-sm border-0 rounded-lg mb-4">
+        <div class="card bg-body shadow-sm border border-secondary rounded-lg mb-4">
         <div class="card-body p-4 p-md-5">
           <div class="d-flex align-items-center mb-4">
             <div
@@ -20,7 +20,7 @@
               {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
             </div>
             <div class="flex-grow-1">
-              <div class="fw-bold fs-5 text-dark">
+              <div class="fw-bold fs-5 text-body-emphasis">
                 {{ post.user?.username ?? 'Anonymous' }}
               </div>
               <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
@@ -36,8 +36,8 @@
             </span>
           </div>
 
-          <h1 class="fw-bold text-dark mb-3">{{ post.title }}</h1>
-          <p class="fs-5 text-secondary" style="white-space: pre-line;">
+          <h1 class="fw-bold text-body-emphasis mb-3">{{ post.title }}</h1>
+          <p class="fs-5" style="white-space: pre-line;">
             {{ post.content }}
           </p>
 
@@ -46,8 +46,7 @@
               :disabled="!authUserId"
               class="btn d-flex align-items-center rounded-pill px-3 py-2"
               :class="{
-                'btn-light text-muted': !authUserId,
-                'btn-outline-danger': authUserId && !post.liked,
+                'btn-secondary': !authUserId || !post.liked,
                 'btn-danger': authUserId && post.liked
               }"
               @click="authUserId && toggleLike(post)"
@@ -58,7 +57,7 @@
 
             <button
               v-if="authUserId && post.user?.user_id == authUserId"
-              class="btn btn-outline-secondary d-flex align-items-center rounded-pill px-3 py-2"
+              class="btn btn-secondary d-flex align-items-center rounded-pill px-3 py-2"
               @click="openDeletePostModal"
             >
               <i class="fas fa-trash-alt me-2"></i>
@@ -76,7 +75,7 @@
         <div v-if="authUserId" class="d-flex mt-3 mb-4">
           <div class="me-3 flex-shrink-0">
             <div
-              class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
+              class="rounded-circle bg-body-secondary text-body-emphasis d-flex align-items-center justify-content-center"
               style="width: 40px; height: 40px; font-weight: bold;"
             >
               {{ authUserIdInitial }}
@@ -85,7 +84,7 @@
           <div class="flex-grow-1">
             <textarea
               v-model="newComment"
-              class="form-control mb-2"
+              class="form-control bg-body mb-2"
               rows="3"
               placeholder="Write a comment..."
             ></textarea>
@@ -116,7 +115,7 @@
 
       <div class="modal fade" id="deletePostModal" tabindex="-1" aria-hidden="true" ref="deletePostModal">
         <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content rounded-3 shadow">
+          <div class="modal-content bg-body rounded-3 shadow">
             <div class="modal-header border-0">
               <h5 class="modal-title fw-bold">
                 <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
@@ -136,7 +135,7 @@
 
       <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModal">
         <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content rounded-3 shadow">
+          <div class="modal-content bg-body rounded-3 shadow">
             <div class="modal-header border-0">
               <h5 class="modal-title fw-bold">
                 <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Delete

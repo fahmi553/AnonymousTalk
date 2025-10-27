@@ -26,31 +26,68 @@ class ProfileController extends Controller
         $authUser = auth()->user();
         $isOwner = $authUser && $authUser->user_id === $profileUser->user_id;
 
-        $postsQuery = $profileUser->posts();
-        $posts = ($isOwner || !$profileUser->hide_all_posts)
-            ? $postsQuery
-                ->withCount(['comments', 'likes'])
-                ->where('hidden_in_profile', false)
-                ->latest()
-                ->get()
-            : collect();
+        $perPage = (int) $request->input('per_page', 10);
+        $search = $request->input('search', null);
 
-        $comments = $isOwner
-            ? $profileUser->comments()
+        $postsQuery = $profileUser->posts()
+            ->withCount(['comments', 'likes'])
+            ->where('hidden_in_profile', false)
+            ->latest();
+
+        if (!empty($search)) {
+            $postsQuery->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        $posts = [];
+        $postsMeta = null;
+
+        if ($isOwner || !$profileUser->hide_all_posts) {
+            $postsPaginated = $postsQuery->paginate($perPage);
+
+            $posts = $postsPaginated->items();
+
+            $postsMeta = [
+                'current_page' => $postsPaginated->currentPage(),
+                'last_page'    => $postsPaginated->lastPage(),
+                'per_page'     => $postsPaginated->perPage(),
+                'total'        => $postsPaginated->total(),
+            ];
+        }
+        $comments = [];
+        $commentsMeta = null;
+
+        if ($isOwner) {
+            $commentsQuery = $profileUser->comments()
                 ->with('post:post_id,title')
-                ->latest()
-                ->get()
-            : collect();
+                ->latest();
 
-        // ✅ Always include total comment count, even if comments are hidden
+            if (!empty($search)) {
+                $commentsQuery->where('content', 'like', "%{$search}%");
+            }
+
+            $commentsPaginated = $commentsQuery->paginate($perPage);
+            $comments = $commentsPaginated->items();
+            $commentsMeta = [
+                'current_page' => $commentsPaginated->currentPage(),
+                'last_page'    => $commentsPaginated->lastPage(),
+                'per_page'     => $commentsPaginated->perPage(),
+                'total'        => $commentsPaginated->total(),
+            ];
+        }
+
         $commentCount = $profileUser->comments()->count();
 
         return response()->json([
             'user' => $profileUser,
             'is_owner' => $isOwner,
             'posts' => $posts,
+            'posts_meta' => $postsMeta,
             'comments' => $comments,
-            'comment_count' => $commentCount, // 👈 Added line
+            'comments_meta' => $commentsMeta,
+            'comment_count' => $commentCount,
         ]);
     }
 

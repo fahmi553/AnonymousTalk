@@ -17,7 +17,7 @@
     <div v-if="loading" class="text-center mt-5">Loading profile...</div>
     <div v-else-if="error" class="text-danger mt-5">{{ error }}</div>
 
-    <div v-else-if="user" class="card shadow-lg border-0 overflow-hidden">
+    <div v-else-if="user" class="card bg-body shadow-lg border-0 overflow-hidden">
       <div class="p-4 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="d-flex align-items-center">
           <img
@@ -75,7 +75,7 @@
 
         <div v-if="isSelf" class="mt-3 d-flex gap-2">
           <button
-            class="btn btn-outline-secondary flex-grow-1"
+            class="btn btn-secondary flex-grow-1"
             @click="toggleHideAll('posts')"
             :disabled="loadingPostsToggle"
           >
@@ -83,8 +83,7 @@
             {{ user.hide_all_posts ? 'Show All Posts' : 'Hide All Posts' }}
           </button>
         </div>
-
-        <ul class="nav nav-tabs mt-4" id="profileTabs">
+        <ul class="nav nav-pills mt-4" id="profileTabs">
           <li class="nav-item">
             <button
               class="nav-link"
@@ -122,7 +121,7 @@
               <div>
                 <router-link
                   :to="`/posts/${post.post_id}`"
-                  class="fw-semibold text-decoration-none"
+                  class="fw-semibold text-decoration-none text-body-emphasis"
                 >
                   {{ post.title || 'Untitled Post' }}
                 </router-link>
@@ -130,11 +129,10 @@
                   {{ post.comments_count ?? 0 }} comments · {{ post.likes_count ?? 0 }} likes
                 </p>
               </div>
-
               <button
                 v-if="isSelf"
                 class="btn btn-sm"
-                :class="post.hidden_in_profile ? 'btn-outline-success' : 'btn-outline-secondary'"
+                :class="post.hidden_in_profile ? 'btn-success' : 'btn-secondary'"
                 @click="togglePostVisibility(post.post_id)"
               >
                 <i :class="post.hidden_in_profile ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
@@ -163,7 +161,7 @@
             >
               <p class="mb-1">{{ c.content }}</p>
               <router-link
-                v-if="c.post"
+                v...if="c.post"
                 :to="`/posts/${c.post.post_id}`"
                 class="small text-muted"
               >
@@ -176,11 +174,11 @@
           <router-link
             v-if="isSelf"
             to="/profile/edit"
-            class="btn btn-outline-primary flex-grow-1"
+            class="btn btn-primary flex-grow-1"
           >
             <i class="fas fa-edit me-1"></i> Edit Profile
           </router-link>
-          <button v-else class="btn btn-outline-danger flex-grow-1">🚩 Report User</button>
+          <button v-else class="btn btn-danger flex-grow-1">🚩 Report User</button>
         </div>
       </div>
     </div>
@@ -227,6 +225,7 @@ const fetchUser = async () => {
     user.value = res.data.user
     isSelf.value = res.data.is_owner
     posts.value = Array.isArray(res.data.posts) ? res.data.posts : []
+    comments.value = Array.isArray(res.data.comments) ? res.data.comments : []
     comment_count.value = res.data.comment_count ?? 0
   } catch (e) {
     console.error(e)
@@ -265,9 +264,6 @@ watch(() => route.fullPath, fetchUser)
 <style scoped>
 .card {
   border-radius: 15px;
-}
-.nav-tabs .nav-link.active {
-  font-weight: 600;
 }
 .opacity-50 {
   opacity: 0.5;

@@ -1,7 +1,7 @@
 <template>
   <div class="container py-4" style="max-width: 650px;">
     <div
-      v-if="showToast"
+      v-if="showSuccessToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
       role="alert"
       aria-live="assertive"
@@ -15,12 +15,31 @@
         <button
           type="button"
           class="btn-close btn-close-white me-2 m-auto"
-          @click="showToast = false"
+          @click="showSuccessToast = false"
         ></button>
       </div>
     </div>
-
-    <div class="card shadow-lg p-4 border-0 rounded-4">
+    <div
+      v-if="showErrorToast"
+      class="toast align-items-center text-bg-danger border-0 position-fixed top-0 end-0 m-3 show"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      style="z-index: 1055; min-width: 250px;"
+    >
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          {{ errorMessage }}
+        </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white me-2 m-auto"
+          @click="showErrorToast = false"
+        ></button>
+      </div>
+    </div>
+    <div class="card bg-body shadow-lg p-4 border-0 rounded-4">
       <h3 class="mb-4 fw-bold text-primary">
         <i class="fas fa-pen-nib me-2"></i> Create a New Post
       </h3>
@@ -33,7 +52,7 @@
           <input
             v-model="title"
             type="text"
-            class="form-control"
+            class="form-control bg-body"
             :class="{ 'is-invalid': showErrors && !title.trim() }"
           />
           <div v-if="showErrors && !title.trim()" class="invalid-feedback">
@@ -47,7 +66,7 @@
           </label>
           <textarea
             v-model="content"
-            class="form-control"
+            class="form-control bg-body"
             rows="4"
             :class="{ 'is-invalid': showErrors && !content.trim() }"
           ></textarea>
@@ -62,7 +81,7 @@
           </label>
           <select
             v-model="category"
-            class="form-select"
+            class="form-select bg-body"
             :class="{ 'is-invalid': showErrors && !category }"
           >
             <option disabled value="">-- Select Category --</option>
@@ -83,7 +102,7 @@
           <button type="submit" class="btn btn-success flex-grow-1">
             <i class="fas fa-paper-plane me-1"></i> Post
           </button>
-          <router-link to="/" class="btn btn-outline-secondary flex-grow-1">
+          <router-link to="/" class="btn btn-secondary flex-grow-1">
             <i class="fas fa-times me-1"></i> Cancel
           </router-link>
         </div>
@@ -104,7 +123,9 @@ const content = ref("");
 const category = ref("");
 const categories = ref([]);
 const showErrors = ref(false);
-const showToast = ref(false);
+const showSuccessToast = ref(false);
+const showErrorToast = ref(false);
+const errorMessage = ref("Failed to create post. Please try again.");
 
 const fetchCategories = async () => {
   try {
@@ -112,6 +133,9 @@ const fetchCategories = async () => {
     categories.value = res.data;
   } catch (err) {
     console.error("Failed to load categories", err);
+    errorMessage.value = "Failed to load categories.";
+    showErrorToast.value = true;
+    setTimeout(() => (showErrorToast.value = false), 3000);
   }
 };
 
@@ -134,14 +158,16 @@ const submitPost = async () => {
     category.value = "";
     showErrors.value = false;
 
-    showToast.value = true;
+    showSuccessToast.value = true;
     setTimeout(() => {
-      showToast.value = false;
+      showSuccessToast.value = false;
       router.push("/");
     }, 2000);
   } catch (err) {
     console.error("Post failed", err);
-    alert("Failed to create post. Please try again.");
+    errorMessage.value = err.response?.data?.message || "Failed to create post. Please try again.";
+    showErrorToast.value = true;
+    setTimeout(() => (showErrorToast.value = false), 3000);
   }
 };
 

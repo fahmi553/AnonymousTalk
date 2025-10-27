@@ -27,6 +27,14 @@ class PostController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                ->orWhere('content', 'like', "%{$searchTerm}%");
+            });
+        }
+
         if ($request->filled('sort')) {
             if ($request->sort === 'asc') {
                 $query->orderBy('created_at', 'asc');
@@ -47,20 +55,21 @@ class PostController extends Controller
             $query->has('comments');
         }
 
-        $postsCollection = $query->get();
+        $perPage = $request->input('per_page', 10);
+        $postsPaginated = $query->paginate($perPage);
 
         $likedPostIds = [];
         if (auth()->check()) {
             $likedPostIds = Like::whereIn(
                     'post_id',
-                    $postsCollection->pluck('post_id')->toArray()
+                    $postsPaginated->pluck('post_id')->toArray()
                 )
                 ->where('user_id', auth()->id())
                 ->pluck('post_id')
                 ->toArray();
         }
 
-        $posts = $postsCollection->map(function ($post) use ($likedPostIds) {
+        $postsData = $postsPaginated->getCollection()->map(function ($post) use ($likedPostIds) {
             return [
                 'post_id'    => $post->post_id,
                 'title'      => $post->title,
@@ -86,7 +95,17 @@ class PostController extends Controller
             ];
         });
 
-        return response()->json($posts);
+        $response = [
+            'data' => $postsData,
+            'meta' => [
+                'current_page' => $postsPaginated->currentPage(),
+                'last_page'    => $postsPaginated->lastPage(),
+                'per_page'     => $postsPaginated->perPage(),
+                'total'        => $postsPaginated->total(),
+            ],
+        ];
+
+        return response()->json($response);
     }
 
     public function create()
@@ -260,5 +279,35 @@ class PostController extends Controller
                 ? $comment->replies->map(fn($r) => $this->transformComment($r))
                 : [],
         ];
+    }
+
+        public function getTrendingPosts()
+    {
+        $trendingPosts = Post::query()
+            ->with([
+                'user:user_id,username',
+                'categoryModel:category_id,name'
+            ])
+            ->withCount(['likes', 'comments'])
+            ->where('created_at', '>=', now()->subHours(72))
+            ->selectRaw('*, (likes_count + (comments_count * 2)) as trending_score')
+            ->orderBy('trending_score', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        $formattedPosts = $trendingPosts->map(function ($post) {
+            return [
+                'post_id' => $post->post_id,
+                'title' => $post->title,
+                'user' => [
+                    'username' => $post->user->username ?? 'Anonymous'
+                ],
+                'comments_count' => $post->comments_count,
+                'likes_count' => $post->likes_count,
+            ];
+        });
+
+        return response()->json($formattedPosts);
     }
 }

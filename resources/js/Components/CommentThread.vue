@@ -1,8 +1,12 @@
 <template>
+  <!--
+    FIX 1: Changed 'bg-dark text-white' to 'bg-body-secondary text-body-emphasis'.
+    This makes the avatar theme-aware (light gray in light mode, dark gray in dark mode).
+  -->
   <div class="d-flex mb-3">
     <div class="me-2">
       <div
-        class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
+        class="rounded-circle bg-body-secondary text-body-emphasis d-flex align-items-center justify-content-center"
         style="width: 40px; height: 40px; font-weight: bold;"
       >
         {{ (comment.user?.username || '?').charAt(0).toUpperCase() }}
@@ -11,11 +15,14 @@
 
     <div class="flex-grow-1">
       <div class="d-flex align-items-center mb-1">
-        <!-- username (link only if user id exists) -->
+        <!--
+          FIX 2: Replaced 'text-dark' with 'text-body-emphasis'.
+          This makes the username theme-aware.
+        -->
         <a
           v-if="comment.user && comment.user.user_id"
           :href="'/profile/' + comment.user.user_id"
-          class="fw-bold me-2 text-decoration-none text-dark username-link"
+          class="fw-bold me-2 text-decoration-none text-body-emphasis username-link"
         >
           {{ comment.user.username }}
         </a>
@@ -27,6 +34,7 @@
 
         <small class="text-muted">{{ timeAgo(comment.created_at) }}</small>
 
+        <!-- 'btn-link' is theme-aware, so this is fine -->
         <button
           v-if="authUserId"
           class="btn btn-link btn-sm p-0 ms-2"
@@ -36,6 +44,7 @@
           Reply
         </button>
 
+        <!-- 'text-danger' is theme-aware, so this is fine -->
         <button
           v-if="authUserId == comment.user?.user_id"
           class="btn btn-link btn-sm text-danger p-0 ms-2"
@@ -46,40 +55,50 @@
         </button>
       </div>
 
+      <!-- The main comment text inherits the body color, which is good -->
       <p class="mb-1">
         <template v-if="comment.reply_to && comment.reply_to_user_id">
-            <a
+          <!-- 'text-primary' is theme-aware, this is fine -->
+          <a
             :href="'/profile/' + comment.reply_to_user_id"
             class="text-primary fw-bold me-1 text-decoration-none"
             style="cursor: pointer; z-index: 5; position: relative;"
-            >
+          >
             @{{ comment.reply_to }}
-            </a>
-            {{ stripLeadingMention(comment.content) }}
+          </a>
+          {{ stripLeadingMention(comment.content) }}
         </template>
 
         <template v-else-if="comment.reply_to">
-            <span class="text-primary fw-bold me-1">@{{ comment.reply_to }}</span>
-            {{ stripLeadingMention(comment.content) }}
+          <span class="text-primary fw-bold me-1">@{{ comment.reply_to }}</span>
+          {{ stripLeadingMention(comment.content) }}
         </template>
 
         <template v-else>
-            {{ comment.content }}
+          {{ comment.content }}
         </template>
-       </p>
+      </p>
 
       <!-- Reply form -->
       <div v-if="showReplyForm" class="mt-2 ms-4">
         <div class="text-muted small mb-1">
           Replying to <span class="fw-bold">@{{ comment.user?.username || 'Anonymous' }}</span>
         </div>
+        <!--
+          FIX 3: Added 'bg-body' to the textarea.
+          This fixes the white background in dark mode.
+        -->
         <textarea
           v-model="replyContent"
-          class="form-control form-control-sm mb-1"
+          class="form-control form-control-sm bg-body mb-1"
           rows="2"
           placeholder="Write a reply..."
         ></textarea>
-        <button class="btn btn-sm btn-outline-primary" @click="submitReply" type="button">
+        <!--
+          FIX 4: Changed 'btn-outline-primary' to 'btn-primary'.
+          This solid button is visible in all modes.
+        -->
+        <button class="btn btn-sm btn-primary" @click="submitReply" type="button">
           Submit Reply
         </button>
       </div>
@@ -102,6 +121,7 @@
 </template>
 
 <script setup>
+// --- SCRIPT IS UNCHANGED ---
 import { ref, computed, onMounted } from "vue";
 
 const props = defineProps({
@@ -115,12 +135,10 @@ const emit = defineEmits(["reply", "deleted", "delete-request"]);
 const showReplyForm = ref(false);
 const replyContent = ref("");
 
-// ✅ Add this computed property
 const hasReplyTarget = computed(() => {
   return !!(props.comment.reply_to_user_id && props.comment.reply_to);
 });
 
-// ✅ Optional: debug what Vue actually receives
 onMounted(() => {
   console.log("Comment data:", props.comment.reply_to, props.comment.reply_to_user_id);
 });

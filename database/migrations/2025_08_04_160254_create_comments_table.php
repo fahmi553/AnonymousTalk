@@ -13,14 +13,15 @@ return new class extends Migration
     {
         Schema::create('comments', function (Blueprint $table) {
             $table->id('comment_id');
-
             $table->unsignedBigInteger('post_id');
             $table->unsignedBigInteger('user_id');
             $table->text('content');
             $table->decimal('sentiment_score', 5, 2)->nullable();
             $table->unsignedBigInteger('parent_id')->nullable();
-            $table->foreign('parent_id')->references('comment_id')->on('comments')->onDelete('cascade');
+            $table->enum('status', ['published', 'moderated', 'deleted'])->default('published');
             $table->timestamps();
+
+            $table->foreign('parent_id')->references('comment_id')->on('comments')->onDelete('cascade');
             $table->foreign('post_id')->references('post_id')->on('posts')->onDelete('cascade');
             $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
         });

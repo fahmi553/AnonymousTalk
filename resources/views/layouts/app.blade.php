@@ -9,15 +9,15 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100 bg-body-tertiary">
 
-    <div id="vue-header"></div>
+    <div id="vue-header" class="sticky-top"></div>
 
     <div id="app" class="d-flex flex-grow-1">
         @unless (request()->is('login', 'register', 'password/*'))
             @include('layouts.sidebar')
         @endunless
-        <main class="flex-grow-1 p-4">
+        <main class="flex-grow-1 p-4 bg-body">
             @foreach (['status' => 'info', 'success' => 'success', 'error' => 'danger'] as $msg => $type)
                 @if (session($msg))
                     <div class="alert alert-{{ $type }}">{{ session($msg) }}</div>

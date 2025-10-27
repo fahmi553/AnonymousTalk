@@ -16,7 +16,12 @@ import ProfileView from './Components/anonymous/ProfileView.vue'
 import ProfileEdit from './Components/anonymous/ProfileEdit.vue'
 import Header from './Components/anonymous/Header.vue'
 import NotFound from './Components/anonymous/NotFound.vue'
+import ThemeToggle from "./Components/anonymous/ThemeToggle.vue"
 import '@fortawesome/fontawesome-free/css/all.min.css'
+
+if (document.getElementById("vue-header")) {
+    createApp(ThemeToggle).mount("#vue-header")
+}
 
 const routes = [
   { path: '/', component: PostFeed },

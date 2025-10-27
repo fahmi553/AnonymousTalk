@@ -49,4 +49,9 @@ class Comment extends Model
     {
         return $this->belongsTo(Comment::class, 'parent_id');
     }
+
+    public function scopeVisible($query)
+    {
+        return $query->where('status', 'visible');
+    }
 }

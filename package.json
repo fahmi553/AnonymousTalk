@@ -25,6 +25,7 @@
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^7.1.0",
+        "lodash.debounce": "^4.0.8",
         "vue-router": "^4.5.1"
     }
 }
