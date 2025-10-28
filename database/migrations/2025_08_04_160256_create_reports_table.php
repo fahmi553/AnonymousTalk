@@ -6,31 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up()
+    public function up(): void
     {
         Schema::create('reports', function (Blueprint $table) {
-            $table->id('report_id');
-
-            $table->unsignedBigInteger('reporter_id');
-            $table->unsignedBigInteger('reported_post_id');
-
-            $table->text('reason');
-            $table->enum('status', ['pending', 'reviewed', 'closed'])->default('pending');
+            $table->bigIncrements('report_id');
+            $table->unsignedBigInteger('reporter_id')->nullable();
+            $table->unsignedBigInteger('reportable_id')->nullable();
+            $table->string('reportable_type')->nullable();
+            $table->text('reason')->nullable();
+            $table->enum('status', ['pending', 'reviewed', 'resolved'])->default('pending');
             $table->timestamps();
 
-            $table->foreign('reporter_id')->references('user_id')->on('users')->onDelete('cascade');
-            $table->foreign('reported_post_id')->references('post_id')->on('posts')->onDelete('cascade');
+            $table->index(['reportable_id', 'reportable_type']);
+            $table->foreign('reporter_id')
+                ->references('user_id')
+                ->on('users')
+                ->onDelete('set null');
         });
     }
 
-
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('reports');

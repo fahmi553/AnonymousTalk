@@ -10,7 +10,7 @@
     </div>
 
     <div v-else-if="post">
-        <div class="card bg-body shadow-sm border border-secondary rounded-lg mb-4">
+      <div class="card bg-body shadow-sm border border-secondary rounded-lg mb-4">
         <div class="card-body p-4 p-md-5">
           <div class="d-flex align-items-center mb-4">
             <div
@@ -37,11 +37,9 @@
           </div>
 
           <h1 class="fw-bold text-body-emphasis mb-3">{{ post.title }}</h1>
-          <p class="fs-5" style="white-space: pre-line;">
-            {{ post.content }}
-          </p>
+          <p class="fs-5" style="white-space: pre-line;">{{ post.content }}</p>
 
-          <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+          <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
             <button
               :disabled="!authUserId"
               class="btn d-flex align-items-center rounded-pill px-3 py-2"
@@ -63,10 +61,20 @@
               <i class="fas fa-trash-alt me-2"></i>
               <span>Delete Post</span>
             </button>
+
+            <button
+              v-else-if="authUserId"
+              class="btn btn-outline-danger d-flex align-items-center rounded-pill px-3 py-2"
+              @click="openReportModal(post.post_id)"
+            >
+              <i class="fas fa-flag me-2"></i>
+              <span>Report Post</span>
+            </button>
           </div>
         </div>
       </div>
 
+      <!-- COMMENTS -->
       <div class="mt-5">
         <h4 class="fw-bold mb-3">
           <i class="fas fa-comments me-2 text-primary"></i> Comments
@@ -113,6 +121,7 @@
         />
       </div>
 
+      <!-- DELETE POST MODAL -->
       <div class="modal fade" id="deletePostModal" tabindex="-1" aria-hidden="true" ref="deletePostModal">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content bg-body rounded-3 shadow">
@@ -120,7 +129,7 @@
               <h5 class="modal-title fw-bold">
                 <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
               </h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
               Are you sure you want to delete this post? All comments will be deleted as well. This action cannot be undone.
@@ -133,6 +142,7 @@
         </div>
       </div>
 
+      <!-- DELETE COMMENT MODAL -->
       <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModal">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content bg-body rounded-3 shadow">
@@ -142,9 +152,7 @@
               </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-              Are you sure you want to delete this comment?
-            </div>
+            <div class="modal-body">Are you sure you want to delete this comment?</div>
             <div class="modal-footer border-0">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-danger" @click="confirmDelete">Delete</button>
@@ -153,6 +161,34 @@
         </div>
       </div>
 
+      <!-- REPORT MODAL -->
+      <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true" ref="reportModal">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content bg-body rounded-3 shadow">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold">
+                <i class="fas fa-flag text-danger me-2"></i> Report Post
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <label class="form-label">Reason for reporting:</label>
+              <textarea
+                v-model="reportReason"
+                class="form-control"
+                rows="3"
+                placeholder="Describe the issue..."
+              ></textarea>
+            </div>
+            <div class="modal-footer border-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-danger" @click="submitReport">Submit Report</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOAST -->
       <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" :class="toastClass" role="alert" aria-live="assertive" aria-atomic="true" ref="toastEl">
           <div class="d-flex">
@@ -177,9 +213,7 @@ axios.defaults.withCredentials = true
 const route = useRoute()
 const postId = route.params.id
 const authUserId = window.authUserId || null
-const authUserIdInitial = window.authUserName
-  ? window.authUserName.charAt(0).toUpperCase()
-  : "?"
+const authUserIdInitial = window.authUserName ? window.authUserName.charAt(0).toUpperCase() : "?"
 
 const post = ref({ comments: [] })
 const loading = ref(true)
@@ -187,12 +221,41 @@ const error = ref("")
 const newComment = ref("")
 const deleteTargetId = ref(null)
 const deleteModal = ref(null)
+const deletePostModal = ref(null)
+const reportModal = ref(null)
+const reportTargetId = ref(null)
+const reportReason = ref("")
 
 const toastMessage = ref("")
 const toastClass = ref("bg-success")
 const toastEl = ref(null)
 let toastInstance = null
-const deletePostModal = ref(null)
+
+const categories = ref([])
+
+const openReportModal = (targetId) => {
+  reportTargetId.value = targetId
+  const modal = new Modal(reportModal.value)
+  modal.show()
+}
+
+const submitReport = async () => {
+  if (!reportReason.value.trim()) return
+  try {
+    await axios.get("/sanctum/csrf-cookie")
+    await axios.post("/api/posts/report", {
+      target_id: reportTargetId.value,
+      reason: reportReason.value.trim(),
+    })
+    showToast("Report submitted successfully")
+    Modal.getInstance(reportModal.value).hide()
+  } catch (err) {
+    console.error("Failed to submit report:", err)
+    showToast("Failed to submit report", "error")
+  } finally {
+    reportReason.value = ""
+  }
+}
 
 const openDeletePostModal = () => {
   const modal = new Modal(deletePostModal.value)
@@ -202,13 +265,9 @@ const openDeletePostModal = () => {
 const showToast = (message, type = "success") => {
   toastMessage.value = message
   toastClass.value = type === "success" ? "bg-success" : "bg-danger"
-  if (!toastInstance) {
-    toastInstance = new Toast(toastEl.value)
-  }
+  if (!toastInstance) toastInstance = new Toast(toastEl.value)
   toastInstance.show()
 }
-
-const categories = ref([])
 
 const fetchCategories = async () => {
   try {
@@ -224,16 +283,12 @@ const confirmDeletePost = async () => {
     await axios.get("/sanctum/csrf-cookie")
     await axios.delete(`/api/posts/${postId}`)
     showToast("Post deleted successfully", "success")
-    const modal = Modal.getInstance(deletePostModal.value)
-    modal.hide()
-    setTimeout(() => {
-      window.location.href = "/"
-    }, 1000)
+    Modal.getInstance(deletePostModal.value).hide()
+    setTimeout(() => window.location.href = "/", 1000)
   } catch (e) {
-    console.error("Failed to delete post:", e.response?.data || e)
+    console.error("Failed to delete post:", e)
     showToast("Failed to delete post", "error")
-    const modal = Modal.getInstance(deletePostModal.value)
-    modal.hide()
+    Modal.getInstance(deletePostModal.value).hide()
   }
 }
 
@@ -243,23 +298,16 @@ const getCategoryColor = (categoryName) => {
 }
 
 const handleDelete = (id) => {
-  const removeRecursively = (comments) => {
-    return comments
+  const removeRecursively = (comments) =>
+    comments
       .filter(c => c.comment_id !== id)
-      .map(c => ({
-        ...c,
-        replies: removeRecursively(c.replies || [])
-      }))
-  }
-  if (post.value && post.value.comments) {
-    post.value.comments = removeRecursively(post.value.comments)
-  }
+      .map(c => ({ ...c, replies: removeRecursively(c.replies || []) }))
+  if (post.value?.comments) post.value.comments = removeRecursively(post.value.comments)
 }
 
 const openDeleteModal = (id) => {
   deleteTargetId.value = id
-  const modal = new Modal(deleteModal.value)
-  modal.show()
+  new Modal(deleteModal.value).show()
 }
 
 const confirmDelete = async () => {
@@ -270,11 +318,10 @@ const confirmDelete = async () => {
     handleDelete(deleteTargetId.value)
     showToast("Comment deleted successfully", "success")
   } catch (e) {
-    console.error("Failed to delete comment:", e.response?.data || e)
+    console.error("Failed to delete comment:", e)
     showToast("Failed to delete comment", "error")
   } finally {
-    const modal = Modal.getInstance(deleteModal.value)
-    modal.hide()
+    Modal.getInstance(deleteModal.value).hide()
     deleteTargetId.value = null
   }
 }
@@ -285,9 +332,7 @@ const loadPost = async () => {
     const res = await axios.get(`/api/posts/${postId}`)
     post.value = res.data
     post.value.comments = post.value.comments || []
-    post.value.comments.forEach(c => {
-      c.replies = c.replies || []
-    })
+    post.value.comments.forEach(c => c.replies = c.replies || [])
   } catch (e) {
     console.error(e)
     error.value = "Failed to load post."
@@ -298,14 +343,14 @@ const loadPost = async () => {
 
 const toggleLike = async (post) => {
   try {
-    await axios.get('/sanctum/csrf-cookie');
-    const res = await axios.post(`/api/posts/${post.post_id}/toggle-like`);
-    post.liked = res.data.liked;
-    post.likes_count = res.data.likes_count;
+    await axios.get('/sanctum/csrf-cookie')
+    const res = await axios.post(`/api/posts/${post.post_id}/toggle-like`)
+    post.liked = res.data.liked
+    post.likes_count = res.data.likes_count
   } catch (err) {
-    console.error('Error toggling like:', err.response?.data || err);
+    console.error('Error toggling like:', err)
   }
-};
+}
 
 const submitComment = async () => {
   if (!newComment.value.trim()) return
@@ -318,7 +363,7 @@ const submitComment = async () => {
     })
     newComment.value = ""
     await loadPost()
-    showToast("Comment added successfully", "success")
+    showToast("Comment added successfully")
   } catch (e) {
     console.error(e)
     showToast("Failed to submit comment", "error")
@@ -326,22 +371,39 @@ const submitComment = async () => {
 }
 
 const handleReply = async ({ parent_id, content }) => {
-  if (!content || !content.trim()) return;
+  if (!content?.trim()) return
   try {
-    await axios.get("/sanctum/csrf-cookie");
+    await axios.get("/sanctum/csrf-cookie")
     await axios.post("/api/comments", {
       post_id: postId,
       user_id: authUserId,
       content: content.trim(),
       parent_id,
-    });
-    await loadPost();
-    showToast("Reply added successfully", "success");
+    })
+    await loadPost()
+    showToast("Reply added successfully")
   } catch (e) {
-    console.error("Failed to post reply", e);
-    showToast("Failed to post reply", "error");
+    console.error("Failed to post reply", e)
+    showToast("Failed to post reply", "error")
   }
-};
+}
+
+const reportContent = async (type, targetId) => {
+  const reason = prompt(`Enter reason for reporting this ${type}:`)
+  if (!reason) return
+
+  try {
+    await axios.post('/api/report', {
+      type,
+      target_id: targetId,
+      reason,
+    })
+    showToast("Report submitted successfully")
+  } catch (err) {
+    console.error("Failed to submit report:", err)
+    showToast("Failed to submit report", "error")
+  }
+}
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return ''

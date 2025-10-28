@@ -103,4 +103,36 @@ class CommentController extends Controller
 
         $comment->delete();
     }
+
+    public function report(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $comment = Comment::findOrFail($id);
+
+        $report = \App\Models\Report::create([
+            'reportable_type' => Comment::class,
+            'reportable_id' => $comment->comment_id,
+            'user_id' => $request->user()->user_id,
+            'reason' => $request->reason,
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Comment reported successfully.',
+            'report' => $report,
+        ]);
+    }
+
+    public function showReports($id)
+    {
+        $comment = Comment::findOrFail($id);
+        $reports = \App\Models\Report::where('reportable_type', Comment::class)
+            ->where('reportable_id', $id)
+            ->get();
+
+        return response()->json($reports);
+    }
 }

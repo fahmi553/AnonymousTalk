@@ -13,18 +13,40 @@ class Report extends Model
 
     protected $fillable = [
         'reporter_id',
-        'reported_post_id',
+        'reportable_id',
+        'reportable_type',
         'reason',
+        'details',
         'status',
     ];
 
     public function reporter()
     {
-        return $this->belongsTo(User::class, 'reporter_id');
+        return $this->belongsTo(User::class, 'reporter_id', 'user_id');
     }
 
-    public function post()
+    public function reportable()
     {
-        return $this->belongsTo(Post::class, 'reported_post_id');
+        return $this->morphTo();
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function isForPost(): bool
+    {
+        return $this->reportable_type === Post::class;
+    }
+
+    public function isForComment(): bool
+    {
+        return $this->reportable_type === Comment::class;
+    }
+
+    public function isForUser(): bool
+    {
+        return $this->reportable_type === User::class;
     }
 }

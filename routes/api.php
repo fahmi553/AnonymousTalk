@@ -9,6 +9,7 @@ use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\ReportController;
 
 // Public routes
 Route::get('/posts', [PostController::class, 'index']);
@@ -27,10 +28,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
     Route::post('/posts/{postId}/toggle-like', [LikeController::class, 'toggleLike']);
     Route::delete('/posts/{id}', [PostController::class, 'destroy']);
+    Route::post('/report', [ReportController::class, 'store']);
 
     // Comments
     Route::post('/comments', [CommentController::class, 'store']);
     Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
+    Route::post('/comments/{id}/report', [CommentController::class, 'report']);
+    Route::get('/comments/{id}/reports', [CommentController::class, 'showReports'])->middleware('admin');
 
     // Self profile
     Route::get('/profile', [ProfileController::class, 'show']);
@@ -38,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
     Route::post('/profile/toggle-hide-all-posts', [ProfileController::class, 'toggleHideAllPosts']);
+
+    Route::post('/report/user/{user}', [ReportController::class, 'reportUser']);
 
     // Post moderation
     Route::post('/moderate/post/{id}/approve', [ModerationController::class, 'approvePost']);

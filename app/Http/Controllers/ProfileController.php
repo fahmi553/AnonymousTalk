@@ -12,8 +12,15 @@ use App\Models\Comment;
 
 class ProfileController extends Controller
 {
+    /**
+     * Display the specified resource.
+     *
+     * This function is refactored to handle different data requests
+     * based on query parameters, matching the new Vue component.
+     */
     public function show(Request $request, $id = null)
     {
+        // 1. Get User and Ownership
         if ($id) {
             $profileUser = User::with('badges')->findOrFail($id);
         } else {
@@ -26,40 +33,68 @@ class ProfileController extends Controller
         $authUser = auth()->user();
         $isOwner = $authUser && $authUser->user_id === $profileUser->user_id;
 
+        // 2. Handle 'user_only' request (for initial page load)
+        if ($request->boolean('user_only')) {
+            // Get aggregate counts for the stats bar
+            $postCount = $profileUser->posts()->count();
+            $commentCount = $profileUser->comments()->count();
+
+            return response()->json([
+                'user' => $profileUser,
+                'is_owner' => $isOwner,
+                'comment_count' => $commentCount, // Total comments for stats
+                'posts_meta' => ['total' => $postCount], // Total posts for stats
+                'comments_meta' => ['total' => $commentCount] // Total comments for stats
+            ]);
+        }
+
+        // 3. Handle data tab requests (for pagination)
         $perPage = (int) $request->input('per_page', 10);
         $search = $request->input('search', null);
 
-        $postsQuery = $profileUser->posts()
-            ->withCount(['comments', 'likes'])
-            ->where('hidden_in_profile', false)
-            ->latest();
+        // --- Handle POSTS Tab ---
+        if ($request->input('tab') === 'posts') {
+            $postsQuery = $profileUser->posts()
+                ->withCount(['comments', 'likes'])
+                ->latest();
 
-        if (!empty($search)) {
-            $postsQuery->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                ->orWhere('content', 'like', "%{$search}%");
-            });
-        }
+            // Apply visibility rules
+            if (!$isOwner) {
+                // If not owner, check if profile is private
+                if ($profileUser->hide_all_posts) {
+                    // Return empty if private and not owner
+                    return response()->json([
+                        'posts' => [],
+                        'posts_meta' => ['total' => 0, 'current_page' => 1, 'last_page' => 1, 'per_page' => $perPage]
+                    ]);
+                }
+                // If not owner and not private, only show non-hidden posts
+                $postsQuery->where('hidden_in_profile', false);
+            }
+            // If owner, they see all their posts (no filter needed, frontend shows 'hidden' status)
 
-        $posts = [];
-        $postsMeta = null;
+            if (!empty($search) && $isOwner) { // Only owner can search
+                $postsQuery->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                });
+            }
 
-        if ($isOwner || !$profileUser->hide_all_posts) {
             $postsPaginated = $postsQuery->paginate($perPage);
 
-            $posts = $postsPaginated->items();
-
-            $postsMeta = [
-                'current_page' => $postsPaginated->currentPage(),
-                'last_page'    => $postsPaginated->lastPage(),
-                'per_page'     => $postsPaginated->perPage(),
-                'total'        => $postsPaginated->total(),
-            ];
+            return response()->json([
+                'posts' => $postsPaginated->items(),
+                'posts_meta' => [
+                    'current_page' => $postsPaginated->currentPage(),
+                    'last_page'    => $postsPaginated->lastPage(),
+                    'per_page'     => $postsPaginated->perPage(),
+                    'total'        => $postsPaginated->total(),
+                ]
+            ]);
         }
-        $comments = [];
-        $commentsMeta = null;
 
-        if ($isOwner) {
+        // --- Handle COMMENTS Tab ---
+        if ($request->input('tab') === 'comments' && $isOwner) {
             $commentsQuery = $profileUser->comments()
                 ->with('post:post_id,title')
                 ->latest();
@@ -69,27 +104,22 @@ class ProfileController extends Controller
             }
 
             $commentsPaginated = $commentsQuery->paginate($perPage);
-            $comments = $commentsPaginated->items();
-            $commentsMeta = [
-                'current_page' => $commentsPaginated->currentPage(),
-                'last_page'    => $commentsPaginated->lastPage(),
-                'per_page'     => $commentsPaginated->perPage(),
-                'total'        => $commentsPaginated->total(),
-            ];
+
+            return response()->json([
+                'comments' => $commentsPaginated->items(),
+                'comments_meta' => [
+                    'current_page' => $commentsPaginated->currentPage(),
+                    'last_page'    => $commentsPaginated->lastPage(),
+                    'per_page'     => $commentsPaginated->perPage(),
+                    'total'        => $commentsPaginated->total(),
+                ]
+            ]);
         }
 
-        $commentCount = $profileUser->comments()->count();
-
-        return response()->json([
-            'user' => $profileUser,
-            'is_owner' => $isOwner,
-            'posts' => $posts,
-            'posts_meta' => $postsMeta,
-            'comments' => $comments,
-            'comments_meta' => $commentsMeta,
-            'comment_count' => $commentCount,
-        ]);
+        // Fallback for any other request (or if tab=comments and not owner)
+        return response()->json(['error' => 'Invalid request or unauthorized tab.'], 400);
     }
+
 
     public function edit()
     {
