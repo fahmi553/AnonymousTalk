@@ -1,5 +1,6 @@
 <template>
   <div class="container" style="max-width: 700px;">
+    <!-- Main Toast -->
     <div
       v-if="showToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
@@ -52,7 +53,6 @@
             <small class="text-muted">Likes</small>
           </div>
         </div>
-
         <div class="mb-3">
           <label class="form-label"><strong>Trust Score:</strong></label>
           <div class="progress" style="height: 20px;">
@@ -68,14 +68,12 @@
             </div>
           </div>
         </div>
-
         <p><i class="fas fa-user-shield me-2"></i><strong>Role:</strong> {{ user.role || "User" }}</p>
         <p>
           <i class="fas fa-calendar-alt me-2"></i>
           <strong>Joined:</strong>
           {{ formatDate(user.created_at) }}
         </p>
-
         <div v-if="isSelf" class="mt-3 d-flex gap-2">
           <button
             class="btn btn-secondary flex-grow-1"
@@ -86,7 +84,6 @@
             {{ user.hide_all_posts ? "Show All Posts" : "Hide All Posts" }}
           </button>
         </div>
-
         <ul v-if="isSelf" class="nav nav-pills mt-4" id="profileTabs">
           <li class="nav-item">
             <button class="nav-link" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">Posts</button>
@@ -95,23 +92,19 @@
             <button class="nav-link" :class="{ active: activeTab === 'comments' }" @click="activeTab = 'comments'">Comments</button>
           </li>
         </ul>
-
         <div class="mt-3" v-if="activeTab === 'posts'">
           <h4 v-if="!isSelf" class="fw-bold mb-3">Posts</h4>
-
           <div v-if="isSelf" class="input-group mb-3">
             <input type="text" class="form-control bg-body" placeholder="Search your posts..." v-model="postSearchTerm" @input="debouncedSearchPosts" />
             <button class="btn btn-outline-secondary" type="button" @click="fetchPosts(1)">
               <i class="fas fa-search"></i>
             </button>
           </div>
-
           <div v-if="loadingPosts" class="text-muted small text-center py-3">Loading posts...</div>
           <div v-else-if="posts.length === 0 && postSearchTerm" class="text-muted small text-center py-3">
             No posts found matching your search.
           </div>
           <div v-else-if="posts.length === 0" class="text-muted small text-center py-3">No posts yet.</div>
-
           <div v-else>
             <div
               v-for="post in posts"
@@ -135,71 +128,66 @@
                 {{ post.hidden_in_profile ? "Unhide" : "Hide" }}
               </button>
             </div>
-
             <PaginationControls v-if="postsMeta.last_page > 1" :meta="postsMeta" @page-change="fetchPosts" class="mt-3" />
           </div>
         </div>
-
         <div class="mt-3" v-else-if="activeTab === 'comments' && isSelf">
           <div class="alert alert-info small text-center rounded-3 mb-3">
             <i class="fas fa-info-circle me-2"></i>
             Only you can see your comment history.
           </div>
-
           <div class="input-group mb-3">
             <input type="text" class="form-control bg-body" placeholder="Search your comments..." v-model="commentSearchTerm" @input="debouncedSearchComments" />
             <button class="btn btn-outline-secondary" type="button" @click="fetchComments(1)">
               <i class="fas fa-search"></i>
             </button>
           </div>
-
           <div v-if="loadingComments" class="text-muted small text-center py-3">Loading comments...</div>
           <div v-else-if="comments.length === 0 && commentSearchTerm" class="text-muted small text-center py-3">No comments found matching your search.</div>
           <div v-else-if="comments.length === 0" class="text-muted small text-center py-3">You haven’t made any comments yet.</div>
-
           <div v-else>
             <div v-for="c in comments" :key="c.comment_id" class="border-bottom py-2">
               <p class="mb-1">{{ c.content }}</p>
-              <router-link v-if="c.post" :to="`/posts/${c.post.post_id}`" class="small text-muted">
+              <router-link v-if="c.post" :to="`/posts/${c.post_id}`" class="small text-muted">
                 On: {{ c.post.title || "Post" }}
               </router-link>
             </div>
-
             <PaginationControls v-if="commentsMeta.last_page > 1" :meta="commentsMeta" @page-change="fetchComments" class="mt-3" />
           </div>
         </div>
-
         <div class="d-flex gap-2 mt-4">
           <router-link v-if="isSelf" to="/profile/edit" class="btn btn-primary flex-grow-1">
             <i class="fas fa-edit me-1"></i> Edit Profile
           </router-link>
-
-          <button v-else class="btn btn-danger flex-grow-1" @click="openReportModal">
+          <button v-else-if="authUserId" class="btn btn-danger flex-grow-1" @click="openReportModal(user.user_id, 'user')">
             🚩 Report User
           </button>
+
         </div>
       </div>
     </div>
 
-    <div
-      class="modal fade show"
-      tabindex="-1"
-      style="display: block;"
-      v-if="showReportModal"
-      role="dialog"
-    >
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true" ref="reportModal">
       <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title">Report User</h5>
-            <button type="button" class="btn-close" @click="closeReportModal"></button>
+        <div class="modal-content bg-body rounded-3 shadow">
+          <div class="modal-header border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="fas fa-flag text-danger me-2"></i>
+              Report {{ reportType === 'user' ? 'User' : (reportType === 'post' ? 'Post' : 'Comment') }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <p class="small text-muted">Please describe why you are reporting this user:</p>
-            <textarea v-model="reportReason" class="form-control" rows="4" placeholder="Enter reason..."></textarea>
+            <label class="form-label">Reason for reporting:</label>
+            <textarea
+              v-model="reportReason"
+              class="form-control bg-body"
+              rows="3"
+              placeholder="Describe the issue..."
+            ></textarea>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeReportModal">Cancel</button>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-danger" @click="submitReport" :disabled="reporting">
               <span v-if="reporting" class="spinner-border spinner-border-sm me-2"></span>
               Submit Report
@@ -208,11 +196,13 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
 import { ref, defineComponent, watch } from 'vue';
+import { Modal } from "bootstrap";
 
 const PaginationControls = defineComponent({
   name: 'PaginationControls',
@@ -305,6 +295,7 @@ import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import debounce from "lodash.debounce";
+import { Modal } from "bootstrap";
 
 const route = useRoute();
 const router = useRouter();
@@ -324,9 +315,15 @@ const commentsMeta = ref({ current_page: 1, last_page: 1, total: 0 });
 const loadingPosts = ref(true);
 const loadingComments = ref(true);
 const loadingPostsToggle = ref(false);
-const showReportModal = ref(false);
+
+const authUserId = window.authUserId || null;
+
+const reportModal = ref(null);
+const reportType = ref('user');
+const reportTargetId = ref(null);
 const reportReason = ref("");
 const reporting = ref(false);
+
 const formatDate = (dateStr) => {
   if (!dateStr) return "Unknown";
   const d = new Date(dateStr);
@@ -407,6 +404,7 @@ const fetchComments = async (page = 1) => {
 
 const debouncedSearchPosts = debounce(() => fetchPosts(1), 400);
 const debouncedSearchComments = debounce(() => fetchComments(1), 400);
+
 const togglePostVisibility = async (id) => {
   try {
     const res = await axios.patch(`/api/posts/${id}/toggle-profile-visibility`);
@@ -416,6 +414,7 @@ const togglePostVisibility = async (id) => {
     console.error("Error toggling post visibility:", err);
   }
 };
+
 const toggleHideAll = async () => {
   try {
     loadingPostsToggle.value = true;
@@ -434,32 +433,33 @@ const toggleHideAll = async () => {
   }
 };
 
-const openReportModal = () => {
+const openReportModal = (targetId, type) => {
+  reportTargetId.value = targetId;
+  reportType.value = type;
   reportReason.value = "";
-  showReportModal.value = true;
+  reporting.value = false;
+  const modal = Modal.getOrCreateInstance(reportModal.value);
+  modal.show();
 };
 
-const closeReportModal = () => {
-  showReportModal.value = false;
-  reportReason.value = "";
-};
 const submitReport = async () => {
-  if (!user.value || !reportReason.value.trim()) {
-    toastMessage.value = "Please provide a reason for your report.";
-    showToast.value = true;
-    setTimeout(() => (showToast.value = false), 3000);
+  if (!reportReason.value.trim()) {
     return;
   }
 
   try {
     reporting.value = true;
-    await axios.post("/api/reports/user", {
-      reported_user_id: user.value.user_id,
-      reason: reportReason.value,
+    await axios.get("/sanctum/csrf-cookie");
+    await axios.post("/api/report", {
+      target_id: reportTargetId.value,
+      type: reportType.value,
+      reason: reportReason.value.trim(),
     });
 
-    showReportModal.value = false;
-    toastMessage.value = "User reported successfully. Thank you!";
+    const modal = Modal.getInstance(reportModal.value);
+    modal.hide();
+
+    toastMessage.value = "Report submitted successfully. Thank you!";
     showToast.value = true;
     setTimeout(() => (showToast.value = false), 3000);
   } catch (err) {
@@ -469,8 +469,10 @@ const submitReport = async () => {
     setTimeout(() => (showToast.value = false), 3000);
   } finally {
     reporting.value = false;
+    reportReason.value = "";
   }
 };
+
 onMounted(fetchUser);
 
 watch(
@@ -503,7 +505,6 @@ watch(activeTab, (newTab) => {
   }
 });
 </script>
-
 
 <style scoped>
 .card {

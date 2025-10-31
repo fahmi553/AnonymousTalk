@@ -41,12 +41,11 @@
         >
           Delete
         </button>
-
         <button
-          v-if="authUserId && comment.user?.user_id !== authUserId"
+          v-if="authUserId && comment.user?.user_id != authUserId"
           class="btn btn-link btn-sm text-danger p-0 ms-2"
           type="button"
-          @click="openReportModal(comment.comment_id)"
+          @click.prevent="$emit('report-request', comment.comment_id, 'comment')"
         >
           Report
         </button>
@@ -62,12 +61,10 @@
           </a>
           {{ stripLeadingMention(comment.content) }}
         </template>
-
         <template v-else-if="comment.reply_to">
           <span class="text-primary fw-bold me-1">@{{ comment.reply_to }}</span>
           {{ stripLeadingMention(comment.content) }}
         </template>
-
         <template v-else>
           {{ comment.content }}
         </template>
@@ -98,36 +95,8 @@
           @reply="propagateReply"
           @deleted="propagateDeleted"
           @delete-request="requestDelete"
+          @report-request="propagateReport"
         />
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" tabindex="-1" aria-hidden="true" ref="reportModal">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-body rounded-3 shadow">
-        <div class="modal-header border-0">
-          <h5 class="modal-title fw-bold">
-            <i class="fas fa-flag text-danger me-2"></i> Report Comment
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <label class="form-label">Reason for reporting:</label>
-          <textarea
-            v-model="reportReason"
-            class="form-control bg-body"
-            rows="3"
-            placeholder="Describe the issue..."
-          ></textarea>
-        </div>
-        <div class="modal-footer border-0">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            Cancel
-          </button>
-          <button type="button" class="btn btn-danger" @click="submitReport">
-            Submit Report
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -135,8 +104,6 @@
 
 <script setup>
 import { ref } from "vue";
-import { Modal } from "bootstrap";
-import axios from "axios";
 
 const props = defineProps({
   comment: { type: Object, required: true },
@@ -144,13 +111,10 @@ const props = defineProps({
   timeAgo: { type: Function, required: true },
 });
 
-const emit = defineEmits(["reply", "deleted", "delete-request"]);
+const emit = defineEmits(["reply", "deleted", "delete-request", "report-request"]);
 
 const showReplyForm = ref(false);
 const replyContent = ref("");
-const reportModal = ref(null);
-const reportReason = ref("");
-const reportTargetId = ref(null);
 
 const submitReply = () => {
   if (!replyContent.value.trim()) return;
@@ -166,28 +130,8 @@ const requestDelete = (id) => emit("delete-request", id);
 const propagateReply = (payload) => emit("reply", payload);
 const propagateDeleted = (id) => emit("deleted", id);
 const stripLeadingMention = (txt) => txt?.replace(/^@\S+\s+/i, "") || "";
-const openReportModal = (id) => {
-  reportTargetId.value = id;
-  const modal = Modal.getOrCreateInstance(reportModal.value);
-  modal.show();
-};
+const propagateReport = (targetId, type) => {
+  emit('report-request', targetId, type);
+}
 
-const submitReport = async () => {
-  if (!reportReason.value.trim()) return alert("Please provide a reason before submitting.");
-  try {
-    await axios.get("/sanctum/csrf-cookie");
-    await axios.post(`/api/comments/${reportTargetId.value}/report`, {
-      reason: reportReason.value.trim(),
-    });
-
-    const modal = Modal.getInstance(reportModal.value);
-    modal.hide();
-    alert("Report submitted successfully!");
-  } catch (err) {
-    console.error("Failed to report comment:", err.response?.data || err);
-    alert("Failed to submit report. Please try again later.");
-  } finally {
-    reportReason.value = "";
-  }
-};
 </script>

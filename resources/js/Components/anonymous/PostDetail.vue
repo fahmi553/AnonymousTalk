@@ -65,7 +65,7 @@
             <button
               v-else-if="authUserId"
               class="btn btn-outline-danger d-flex align-items-center rounded-pill px-3 py-2"
-              @click="openReportModal(post.post_id)"
+              @click="openReportModal(post.post_id, 'post')"
             >
               <i class="fas fa-flag me-2"></i>
               <span>Report Post</span>
@@ -74,7 +74,6 @@
         </div>
       </div>
 
-      <!-- COMMENTS -->
       <div class="mt-5">
         <h4 class="fw-bold mb-3">
           <i class="fas fa-comments me-2 text-primary"></i> Comments
@@ -118,10 +117,10 @@
           @reply="handleReply"
           @deleted="handleDelete"
           @delete-request="openDeleteModal"
+          @report-request="openReportModal"
         />
       </div>
 
-      <!-- DELETE POST MODAL -->
       <div class="modal fade" id="deletePostModal" tabindex="-1" aria-hidden="true" ref="deletePostModal">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content bg-body rounded-3 shadow">
@@ -142,7 +141,6 @@
         </div>
       </div>
 
-      <!-- DELETE COMMENT MODAL -->
       <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModal">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content bg-body rounded-3 shadow">
@@ -161,13 +159,13 @@
         </div>
       </div>
 
-      <!-- REPORT MODAL -->
       <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true" ref="reportModal">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content bg-body rounded-3 shadow">
             <div class="modal-header border-0">
               <h5 class="modal-title fw-bold">
-                <i class="fas fa-flag text-danger me-2"></i> Report Post
+                <i class="fas fa-flag text-danger me-2"></i>
+                Report {{ reportType === 'post' ? 'Post' : 'Comment' }}
               </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -175,7 +173,7 @@
               <label class="form-label">Reason for reporting:</label>
               <textarea
                 v-model="reportReason"
-                class="form-control"
+                class="form-control bg-body"
                 rows="3"
                 placeholder="Describe the issue..."
               ></textarea>
@@ -188,7 +186,6 @@
         </div>
       </div>
 
-      <!-- TOAST -->
       <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" :class="toastClass" role="alert" aria-live="assertive" aria-atomic="true" ref="toastEl">
           <div class="d-flex">
@@ -224,6 +221,7 @@ const deleteModal = ref(null)
 const deletePostModal = ref(null)
 const reportModal = ref(null)
 const reportTargetId = ref(null)
+const reportType = ref('post')
 const reportReason = ref("")
 
 const toastMessage = ref("")
@@ -233,8 +231,10 @@ let toastInstance = null
 
 const categories = ref([])
 
-const openReportModal = (targetId) => {
+const openReportModal = (targetId, type = 'comment') => {
   reportTargetId.value = targetId
+  reportType.value = type
+  reportReason.value = ""
   const modal = new Modal(reportModal.value)
   modal.show()
 }
@@ -243,10 +243,13 @@ const submitReport = async () => {
   if (!reportReason.value.trim()) return
   try {
     await axios.get("/sanctum/csrf-cookie")
-    await axios.post("/api/posts/report", {
+
+    await axios.post("/api/report", {
       target_id: reportTargetId.value,
+      type: reportType.value,
       reason: reportReason.value.trim(),
     })
+
     showToast("Report submitted successfully")
     Modal.getInstance(reportModal.value).hide()
   } catch (err) {
@@ -385,23 +388,6 @@ const handleReply = async ({ parent_id, content }) => {
   } catch (e) {
     console.error("Failed to post reply", e)
     showToast("Failed to post reply", "error")
-  }
-}
-
-const reportContent = async (type, targetId) => {
-  const reason = prompt(`Enter reason for reporting this ${type}:`)
-  if (!reason) return
-
-  try {
-    await axios.post('/api/report', {
-      type,
-      target_id: targetId,
-      reason,
-    })
-    showToast("Report submitted successfully")
-  } catch (err) {
-    console.error("Failed to submit report:", err)
-    showToast("Failed to submit report", "error")
   }
 }
 

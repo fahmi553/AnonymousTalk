@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Report;
 use App\Models\User;
+use App\Models\Post;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,21 +17,25 @@ class ReportController extends Controller
             'type' => 'required|in:user,post,comment',
             'target_id' => 'required|integer',
             'reason' => 'required|string|max:255',
-            'details' => 'nullable|string',
         ]);
+
+        $modelMap = [
+            'user' => User::class,
+            'post' => Post::class,
+            'comment' => Comment::class,
+        ];
+
+        if (!isset($modelMap[$request->type])) {
+            return response()->json(['message' => 'Invalid report type'], 400);
+        }
 
         $report = new Report();
         $report->reporter_id = Auth::id();
         $report->reason = $request->reason;
-        $report->details = $request->details;
+        $report->reportable_type = $modelMap[$request->type];
+        $report->reportable_id = $request->target_id;
 
-        if ($request->type === 'user') {
-            $report->reported_user_id = $request->target_id;
-        } elseif ($request->type === 'post') {
-            $report->post_id = $request->target_id;
-        } elseif ($request->type === 'comment') {
-            $report->comment_id = $request->target_id;
-        }
+        $report->status = 'pending';
 
         $report->save();
 
