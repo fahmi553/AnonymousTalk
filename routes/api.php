@@ -7,9 +7,9 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\AdminController;
 
 // Public routes
 Route::get('/posts', [PostController::class, 'index']);
@@ -59,13 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', fn(Request $request) => $request->user());
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::middleware('admin')->group(function () {
-        Route::get('/admin/posts', [AdminController::class, 'allPosts']);
-        Route::get('/admin/comments', [AdminController::class, 'allComments']);
-        Route::patch('/admin/posts/{id}/toggle', [AdminController::class, 'togglePostStatus']);
-        Route::patch('/admin/comments/{id}/toggle', [AdminController::class, 'toggleCommentStatus']);
-        Route::delete('/admin/posts/{id}', [AdminController::class, 'deletePost']);
-        Route::delete('/admin/comments/{id}', [AdminController::class, 'deleteComment']);
-    });
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
+    Route::delete('/admin/reports/{id}', [AdminController::class, 'deleteReport']);
 });

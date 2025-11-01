@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Models\User;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AdminLoginController;
 
 Route::get('/', fn() => view('welcome'));
 
@@ -60,24 +62,20 @@ Route::post('/reset-password', function (Request $request) {
         : back()->withErrors(['email' => [__($status)]]);
 })->middleware('guest')->name('password.update');
 
-Route::get('/confirm-password', fn() => view('auth.confirm-password'))
-    ->middleware('auth')
-    ->name('password.confirm');
 
-Route::post('/confirm-password', function (Request $request) {
-    $request->validate(['password' => 'required']);
+Route::prefix('admin')->group(function () {
+    Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
+    Route::post('/login', [AdminLoginController::class, 'login'])->name('admin.login.submit');
+    Route::post('/logout', [AdminLoginController::class, 'logout'])->name('admin.logout');
 
-    if (!Hash::check($request->password, $request->user()->password)) {
-        return back()->withErrors(['password' => 'Password is incorrect.']);
-    }
-
-    $request->session()->put('auth.password_confirmed_at', time());
-
-    return redirect()->intended('/');
-})->middleware('auth');
+    Route::middleware(['auth'])->get('/{any?}', function () {
+        return view('layouts.app');
+    })->where('any', '.*');
+});
 
 Route::view('/profile', 'welcome');
 Route::view('/profile/{id}', 'welcome');
+
 Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api).*$');
