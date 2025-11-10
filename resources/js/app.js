@@ -13,15 +13,15 @@ import PostDetail from './Components/anonymous/PostDetail.vue'
 import LikeButton from './Components/anonymous/LikeButton.vue'
 import ProfileView from './Components/anonymous/ProfileView.vue'
 import ProfileEdit from './Components/anonymous/ProfileEdit.vue'
-import Header from './Components/anonymous/Header.vue'
+// import Header from './Components/anonymous/Header.vue'
 import NotFound from './Components/anonymous/NotFound.vue'
-import ThemeToggle from "./Components/anonymous/ThemeToggle.vue"
+// import ThemeToggle from "./Components/anonymous/ThemeToggle.vue"
 import AdminLogin from './Components/admin/AdminLogin.vue'
+import AdminDashboard from './Components/admin/AdminDashboard.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
+import AppHeader from './Components/AppHeader.vue'
+import AppFooter from './Components/AppFooter.vue'
 
-if (document.getElementById("vue-header")) {
-  createApp(ThemeToggle).mount("#vue-header")
-}
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -33,9 +33,10 @@ const routes = [
   { path: '/admin/login', component: AdminLogin, name: 'AdminLogin' },
   {
     path: '/admin/dashboard',
-    component: () => import('./Components/admin/AdminDashboard.vue'),
+    component: AdminDashboard,
     name: 'AdminDashboard'
   },
+
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
@@ -46,7 +47,6 @@ const router = createRouter({
 
 axios.defaults.withCredentials = true
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
-
 const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
 if (token) {
   axios.defaults.headers.common['X-CSRF-TOKEN'] = token
@@ -54,13 +54,15 @@ if (token) {
 
 const app = createApp({})
 app.use(router)
-
 app.component('comment-form', CommentForm)
 app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
+app.mount('#app') // This mounts all your pages
 
-app.mount('#app')
-
-const headerApp = createApp(Header)
+const headerApp = createApp(AppHeader)
 headerApp.use(router)
-headerApp.mount('#vue-header')
+headerApp.mount('#app-header')
+
+const footerApp = createApp(AppFooter)
+footerApp.use(router)
+footerApp.mount('#app-footer')

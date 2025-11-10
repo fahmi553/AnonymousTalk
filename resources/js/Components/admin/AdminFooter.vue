@@ -1,14 +1,7 @@
 <template>
-  <!--
-    FIX: Changed from <footer> to <div>.
-    This dodges any global 'footer {}' CSS rules in your
-    stylesheet that are overriding Bootstrap's classes.
-  -->
   <div class="bg-dark text-light py-5 border-top border-secondary">
     <div class="container">
         <div class="row g-4 gy-5">
-
-            <!-- Admin Panel Info -->
             <div class="col-12 col-lg-4">
                 <h2 class="h4 fw-bold text-white">Anonymous Talk (Admin)</h2>
                 <p class="mt-3 text-white-50" style="max-width: 24rem;">
@@ -18,7 +11,6 @@
 
             <div class="col-lg-2 d-none d-lg-block"></div>
 
-            <!-- Moderation Links -->
             <div class="col-6 col-lg-2">
                 <h3 class="h6 fw-semibold text-white">Moderation</h3>
                 <ul class="list-unstyled mt-3 d-grid gap-2">
@@ -28,7 +20,6 @@
                 </ul>
             </div>
 
-            <!-- Management Links -->
             <div class="col-6 col-lg-2">
                 <h3 class="h6 fw-semibold text-white">Management</h3>
                 <ul class="list-unstyled mt-3 d-grid gap-2">
@@ -38,7 +29,6 @@
                 </ul>
             </div>
 
-            <!-- Quick Actions -->
             <div class="col-12 col-lg-2">
                 <h3 class="h6 fw-semibold text-white">Quick Actions</h3>
                 <div class="d-flex gap-3 mt-3">
@@ -66,5 +56,5 @@
 </template>
 
 <script setup>
-// No script needed
+
 </script>

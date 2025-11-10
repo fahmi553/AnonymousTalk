@@ -8,9 +8,6 @@
     </div>
 
     <div class="d-flex align-items-center gap-2">
-      <!--
-        FIX: The import path for ThemeToggle is now correct.
-      -->
       <ThemeToggle />
       <template v-if="adminUser">
         <span class="text-white me-3">Hi, {{ adminUser.name || adminUser.email }}</span>
@@ -26,16 +23,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-//
-// FIX: Path updated to go up to 'components' and down into 'anonymous'
-//
 import ThemeToggle from '../anonymous/ThemeToggle.vue';
 
 const adminUser = ref(null);
 
 const fetchAdminUser = async () => {
   try {
-    const res = await axios.get('/api/user'); // Assumes /api/user returns the logged-in admin
+    const res = await axios.get('/api/user');
     if (res.data && res.data.role === 'admin') {
       adminUser.value = res.data;
     }
@@ -46,7 +40,6 @@ const fetchAdminUser = async () => {
 
 const logout = async () => {
   try {
-    await axios.get('/sanctum/csrf-cookie');
     await axios.post('/admin/logout');
     window.location.href = '/admin/login';
   } catch (error) {

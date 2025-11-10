@@ -17,10 +17,8 @@ Route::get('/', fn() => view('welcome'));
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-
 Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
-
 Route::get('/forgot-password', fn() => view('auth.forgot-password'))
     ->middleware('guest')
     ->name('password.request');
@@ -64,13 +62,17 @@ Route::post('/reset-password', function (Request $request) {
 
 
 Route::prefix('admin')->group(function () {
+
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
     Route::post('/login', [AdminLoginController::class, 'login'])->name('admin.login.submit');
     Route::post('/logout', [AdminLoginController::class, 'logout'])->name('admin.logout');
 
-    Route::middleware(['auth'])->get('/{any?}', function () {
-        return view('layouts.app');
-    })->where('any', '.*');
+    Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
+        ->get('/{any?}', function () {
+            return view('welcome');
+        })
+        ->where('any', '.*')
+        ->name('admin.dashboard');
 });
 
 Route::view('/profile', 'welcome');
