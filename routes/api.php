@@ -9,7 +9,7 @@ use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\AdminController;
 
 // Public routes
 Route::get('/posts', [PostController::class, 'index']);
@@ -22,7 +22,7 @@ Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.v
 // Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
 
 // Authenticated routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth')->group(function () {
     // Posts
     Route::post('/posts', [PostController::class, 'store']);
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', fn(Request $request) => $request->user());
 });
 
-Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
     Route::delete('/admin/reports/{id}', [AdminController::class, 'deleteReport']);
 });

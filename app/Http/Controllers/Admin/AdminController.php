@@ -4,12 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
-// Added missing models
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Report;
-use App\Models\Comment; // <-- THIS WAS THE MISSING LINE
+use App\Models\Comment;
 
 class AdminController extends Controller
 {
@@ -21,7 +19,7 @@ class AdminController extends Controller
         $stats = [
             'totalUsers' => User::count(),
             'totalPosts' => Post::count(),
-            'totalReports' => Report::where('status', 'pending')->count(), // Only count pending reports
+            'totalReports' => Report::where('status', 'pending')->count(),
         ];
 
         // Eager load the user who reported
@@ -31,7 +29,6 @@ class AdminController extends Controller
             ->take(10)
             ->get()
             ->map(function ($report) {
-                // Determine reportable type for a clean 'Type' column
                 $type = 'Unknown';
                 if ($report->reportable_type === Post::class) {
                     $type = 'Post';
@@ -42,9 +39,9 @@ class AdminController extends Controller
                 }
 
                 return [
-                    'id' => $report->report_id, // Make sure to use 'report_id' if that's your primary key
+                    'id' => $report->report_id, 
                     'type' => $type,
-                    'reported_by' => $report->reporter->username ?? 'Unknown',
+                    'reported_by' => $report->reporter ? $report->reporter->username : 'Unknown',
                     'reason' => $report->reason,
                 ];
             });
