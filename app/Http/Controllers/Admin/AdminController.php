@@ -22,11 +22,10 @@ class AdminController extends Controller
             'totalReports' => Report::where('status', 'pending')->count(),
         ];
 
-        // Eager load the user who reported
         $reports = Report::with('reporter')
             ->where('status', 'pending')
             ->latest()
-            ->take(10)
+            ->take(50)
             ->get()
             ->map(function ($report) {
                 $type = 'Unknown';
@@ -39,10 +38,13 @@ class AdminController extends Controller
                 }
 
                 return [
-                    'id' => $report->report_id, 
+                    'id' => $report->report_id,
                     'type' => $type,
                     'reported_by' => $report->reporter ? $report->reporter->username : 'Unknown',
                     'reason' => $report->reason,
+                
+                    'reportable_id' => $report->reportable_id,
+                    'reportable_type' => $report->reportable_type,
                 ];
             });
 
@@ -57,11 +59,9 @@ class AdminController extends Controller
      */
     public function deleteReport($id)
     {
-        // Use 'report_id' if that is your primary key
-        $report = Report::where('report_id', $id)->firstOrFail();
+        $report = Report::findOrFail($id);
         $report->delete();
 
         return response()->json(['message' => 'Report deleted successfully']);
     }
 }
-

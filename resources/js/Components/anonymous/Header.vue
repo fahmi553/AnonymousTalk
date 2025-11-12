@@ -1,6 +1,7 @@
 <template>
   <header class="header d-flex justify-content-between align-items-center p-3 bg-dark text-white shadow-sm border-bottom border-secondary">
     <div class="d-flex align-items-center">
+            <img :src="myLogo" alt="My Company Logo" class="header-logo me-3">
       <h1 class="me-4 mb-0 h4">Anonymous Talk</h1>
       <nav class="d-flex">
         <router-link to="/" class="nav-link text-white me-3">Home</router-link>
@@ -32,6 +33,7 @@
 import { onMounted } from 'vue'
 import { useAuth } from '../../store/auth'
 import ThemeToggle from './ThemeToggle.vue'
+import myLogo from '../../../images/AnonymousTalkLogo3.png'
 
 const { authUser, fetchUser, logout } = useAuth()
 
@@ -39,7 +41,12 @@ onMounted(fetchUser)
 </script>
 
 <style scoped>
+.header-logo {
+  height: 60px;
+  width: auto;
+}
+
 .nav-link {
-  text-decoration: none;
+ text-decoration: none;
 }
 </style>
