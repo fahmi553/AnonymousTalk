@@ -110,6 +110,7 @@
                       <span v-else>No reports found matching your search.</span>
                     </td>
                   </tr>
+
                   <tr v-for="report in filteredReports" :key="report.id">
                     <td class="ps-3">
                       <span
@@ -124,14 +125,29 @@
                     <td>{{ report.reported_by }}</td>
                     <td>{{ report.reason }}</td>
                     <td>
-                      <a
-                        :href="getReportLink(report)"
-                        target="_blank"
+                      <router-link
+                        :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
                         class="btn btn-primary btn-sm me-2"
-                        v-if="report.reportable_type !== 'App\\Models\\User'"
+                        v-if="report.type === 'Post'"
+                      >
+                        View
+                      </router-link>
+                      <router-link
+                        :to="{ name: 'AdminReportDetail', params: { id: report.post_id_for_comment } }"
+                        class="btn btn-info btn-sm me-2"
+                        v-else-if="report.type === 'Comment' && report.post_id_for_comment"
+                      >
+                        View
+                      </router-link>
+                      <a
+                        :href="`/profile/${report.reportable_id}`"
+                        target="_blank"
+                        class="btn btn-warning btn-sm me-2"
+                        v-else-if="report.type === 'User'"
                       >
                         View
                       </a>
+
                       <button class="btn btn-danger btn-sm" @click="deleteReport(report.id)">
                         Delete
                       </button>
@@ -171,31 +187,23 @@ const filteredReports = computed(() => {
   });
 });
 
-const getReportLink = (report) => {
-  if (report.reportable_type === 'App\\Models\\Post') {
-    return `/posts/${report.reportable_id}`;
-  }
-  if (report.reportable_type === 'App\\Models\\Comment') {
-    return `/profile/${report.reported_by}`;
-  }
-  return '#';
-};
-
-onMounted(async () => {
+const fetchData = async () => {
   try {
-    const res = await axios.get('/api/admin/dashboard')
-    stats.value = res.data.stats
-    allReports.value = res.data.reports
+    const res = await axios.get('/api/admin/dashboard');
+    stats.value = res.data.stats;
+    allReports.value = res.data.reports;
   } catch (error) {
     console.error("Failed to load dashboard data:", error);
   }
-});
+};
+
+onMounted(fetchData);
 
 const deleteReport = async (id) => {
   if (confirm('Are you sure you want to delete this report?')) {
     try {
-      await axios.delete(`/api/admin/reports/${id}`)
-      onMounted(); 
+      await axios.delete(`/api/admin/reports/${id}`);
+      fetchData();
     } catch (error) {
       console.error("Failed to delete report:", error);
       alert("Could not delete the report.");

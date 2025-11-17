@@ -69,14 +69,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const isLoading = ref(false)
-const router = useRouter()
 
 const loginAdmin = async () => {
   error.value = ''
@@ -88,13 +86,7 @@ const loginAdmin = async () => {
       email: email.value,
       password: password.value,
     })
-    const userRes = await axios.get('/api/user');
-    if (userRes.data && userRes.data.role === 'admin') {
-      router.push({ name: 'AdminDashboard' })
-    } else {
-      error.value = 'You do not have permission to access this area.';
-      await axios.post('/logout');
-    }
+    window.location.href = '/admin/dashboard';
 
   } catch (e) {
     console.error('Login error:', e)
@@ -110,7 +102,6 @@ const loginAdmin = async () => {
 </script>
 
 <style scoped>
-
 .login-card-width {
     max-width: 440px;
     border-radius: 12px;

@@ -11,7 +11,10 @@
       <ThemeToggle />
       <template v-if="adminUser">
         <span class="text-white me-3">Hi, {{ adminUser.name || adminUser.email }}</span>
-        <button @click="logout" class="btn btn-light btn-sm">Logout</button>
+        <button @click="logout" class="btn btn-light btn-sm" :disabled="isLoggingOut">
+          <span v-if="isLoggingOut" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span v-else>Logout</span>
+        </button>
       </template>
       <template v-else>
         <a href="/admin/login" class="btn btn-light btn-sm me-2">Admin Login</a>
@@ -26,6 +29,7 @@ import axios from 'axios';
 import ThemeToggle from '../anonymous/ThemeToggle.vue';
 
 const adminUser = ref(null);
+const isLoggingOut = ref(false);
 
 const fetchAdminUser = async () => {
   try {
@@ -39,12 +43,16 @@ const fetchAdminUser = async () => {
 };
 
 const logout = async () => {
+  isLoggingOut.value = true;
   try {
     await axios.post('/admin/logout');
     window.location.href = '/admin/login';
+
   } catch (error) {
     console.error('Admin logout failed:', error);
     alert('Logout failed. Please try again.');
+  } finally {
+    isLoggingOut.value = false;
   }
 };
 

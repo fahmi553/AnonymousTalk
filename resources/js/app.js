@@ -21,7 +21,7 @@ import AdminDashboard from './Components/admin/AdminDashboard.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import AppHeader from './Components/AppHeader.vue'
 import AppFooter from './Components/AppFooter.vue'
-
+import AdminReportDetail from './Components/admin/AdminReportDetail.vue'
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -36,7 +36,11 @@ const routes = [
     component: AdminDashboard,
     name: 'AdminDashboard'
   },
-
+  {
+    path: '/admin/report/:id',
+    component: AdminReportDetail,
+    name: 'AdminReportDetail'
+  },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
