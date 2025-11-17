@@ -16,49 +16,63 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
+        $pendingUserReports = Report::where('status', 'pending')->whereNotNull('reporter_id')->count();
+        $pendingSentimentReports = Report::where('status', 'pending')->whereNull('reporter_id')->count();
+
         $stats = [
             'totalUsers' => User::count(),
             'totalPosts' => Post::count(),
-            'totalReports' => Report::where('status', 'pending')->count(),
+            'pendingUserReports' => $pendingUserReports,
+            'pendingSentimentReports' => $pendingSentimentReports,
         ];
-
-        $reports = Report::with('reporter:user_id,username')
+        $userReports = Report::with('reporter:user_id,username')
             ->where('status', 'pending')
+            ->whereNotNull('reporter_id')
             ->latest()
             ->take(50)
             ->get()
-            ->map(function ($report) {
-                $type = 'Unknown';
-                $postIdForComment = null;
+            ->map(fn($report) => $this->formatReport($report));
+        $sentimentReports = Report::where('status', 'pending')
+            ->whereNull('reporter_id')
+            ->latest()
+            ->take(50)
+            ->get()
+            ->map(fn($report) => $this->formatReport($report));
 
-                if ($report->reportable_type === Post::class) {
-                    $type = 'Post';
-                } elseif ($report->reportable_type === Comment::class) {
-                    $type = 'Comment';
-                    $comment = Comment::find($report->reportable_id);
-                    if ($comment) {
-                        $postIdForComment = $comment->post_id;
-                    }
-                } elseif ($report->reportable_type === User::class) {
-                    $type = 'User';
-                }
-
-                return [
-                    'id' => $report->report_id,
-                    'type' => $type,
-                    'reported_by' => $report->reporter ? $report->reporter->username : 'Unknown',
-                    'reason' => $report->reason,
-
-                    'reportable_id' => $report->reportable_id,
-                    'reportable_type' => $report->reportable_type,
-                    'post_id_for_comment' => $postIdForComment,
-                ];
-            });
 
         return response()->json([
             'stats' => $stats,
-            'reports' => $reports
+            'userReports' => $userReports,
+            'sentimentReports' => $sentimentReports,
         ]);
+    }
+    private function formatReport($report)
+    {
+        $type = 'Unknown';
+        $postIdForComment = null;
+
+        if ($report->reportable_type === Post::class) {
+            $type = 'Post';
+        } elseif ($report->reportable_type === Comment::class) {
+            $type = 'Comment';
+            $comment = Comment::find($report->reportable_id);
+            if ($comment) {
+                $postIdForComment = $comment->post_id;
+            }
+        } elseif ($report->reportable_type === User::class) {
+            $type = 'User';
+        }
+
+        return [
+            'id' => $report->report_id,
+            'type' => $type,
+            'reported_by' => $report->reporter ? $report->reporter->username : 'Automated System',
+            'reason' => $report->reason,
+            'reportable_id' => $report->reportable_id,
+            'reportable_type' => $report->reportable_type,
+            'post_id_for_comment' => $postIdForComment,
+            'status' => $report->status,
+        ];
     }
     public function showReportDetails($postId)
     {
@@ -67,6 +81,7 @@ class AdminController extends Controller
             ->where('reportable_type', Post::class)
             ->where('reportable_id', $postId)
             ->where('status', 'pending')
+            // ->whereNotNull('reporter_id')
             ->get();
 
         return response()->json([

@@ -2,7 +2,7 @@
   <div class="container mt-4">
     <h2 class="mb-4 fw-bold text-body-emphasis">Admin Dashboard</h2>
     <div class="row g-3">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
           <div class="fs-3 text-primary bg-primary-subtle p-3 rounded-3 me-3">
             <i class="fas fa-users"></i>
@@ -13,7 +13,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
           <div class="fs-3 text-success bg-success-subtle p-3 rounded-3 me-3">
             <i class="fas fa-file-alt"></i>
@@ -24,14 +24,25 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
           <div class="fs-3 text-danger bg-danger-subtle p-3 rounded-3 me-3">
-            <i class="fas fa-flag"></i>
+            <i class="fas fa-user-shield"></i>
           </div>
           <div>
-            <h6 class="text-body-secondary mb-0">Pending Reports</h6>
-            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.totalReports }}</p>
+            <h6 class="text-body-secondary mb-0">User Reports</h6>
+            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.pendingUserReports }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
+          <div class="fs-3 text-warning bg-warning-subtle p-3 rounded-3 me-3">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div>
+            <h6 class="text-body-secondary mb-0">Flagged Posts</h6>
+            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.pendingSentimentReports }}</p>
           </div>
         </div>
       </div>
@@ -46,34 +57,25 @@
             <a
               href="#"
               class="list-group-item list-group-item-action"
-              :class="{ 'active': filterType === 'All' }"
-              @click.prevent="filterType = 'All'"
+              :class="{ 'active': activeTab === 'user' }"
+              @click.prevent="activeTab = 'user'"
             >
-              <i class="fas fa-inbox me-2"></i> All Reports
+              <i class="fas fa-inbox me-2"></i> Pending User Reports
             </a>
             <a
               href="#"
               class="list-group-item list-group-item-action"
-              :class="{ 'active': filterType === 'Post' }"
-              @click.prevent="filterType = 'Post'"
+              :class="{ 'active': activeTab === 'sentiment' }"
+              @click.prevent="activeTab = 'sentiment'"
             >
-              <i class="fas fa-file-alt me-2"></i> Post Reports
+              <i class="fas fa-robot me-2"></i> Pending Flagged Posts
             </a>
             <a
               href="#"
-              class="list-group-item list-group-item-action"
-              :class="{ 'active': filterType === 'Comment' }"
-              @click.prevent="filterType = 'Comment'"
+              class="list-group-item list-group-item-action disabled"
+              title="Coming Soon"
             >
-              <i class="fas fa-comment me-2"></i> Comment Reports
-            </a>
-            <a
-              href="#"
-              class="list-group-item list-group-item-action"
-              :class="{ 'active': filterType === 'User' }"
-              @click.prevent="filterType = 'User'"
-            >
-              <i class="fas fa-user me-2"></i> User Reports
+              <i class="fas fa-shield-alt me-2"></i> User Trust Scores
             </a>
           </div>
         </div>
@@ -81,7 +83,9 @@
       <div class="col-lg-9">
         <div class="card bg-body shadow-sm border-0 rounded-lg">
           <div class="card-header bg-body py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h6 class="fw-bold mb-0 text-body-emphasis">{{ filterType }} Reports</h6>
+            <h6 class="fw-bold mb-0 text-body-emphasis">
+              {{ activeTab === 'user' ? 'Pending User Reports' : 'Pending Flagged Posts' }}
+            </h6>
             <div class="input-group" style="max-width: 250px;">
               <span class="input-group-text bg-body-tertiary"><i class="fas fa-search"></i></span>
               <input
@@ -100,13 +104,14 @@
                     <th scope="col" class="ps-3">Type</th>
                     <th scope="col">Reported By</th>
                     <th scope="col">Reason</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="filteredReports.length === 0">
-                    <td colspan="4" class="text-center text-muted p-4">
-                      <span v-if="!searchTerm">No {{ filterType }} reports found.</span>
+                    <td colspan="5" class="text-center text-muted p-4">
+                      <span v-if="!searchTerm">No pending reports found.</span>
                       <span v-else>No reports found matching your search.</span>
                     </td>
                   </tr>
@@ -122,8 +127,18 @@
                         }"
                       >{{ report.type }}</span>
                     </td>
-                    <td>{{ report.reported_by }}</td>
+                    <td>
+                      <i v-if="report.reported_by === 'Automated System'" class="fas fa-robot text-muted me-1" title="Automated System"></i>
+                      {{ report.reported_by }}
+                    </td>
                     <td>{{ report.reason }}</td>
+
+                    <td>
+                      <span class="badge text-bg-warning text-capitalize">
+                        {{ report.status }}
+                      </span>
+                    </td>
+
                     <td>
                       <router-link
                         :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
@@ -132,6 +147,7 @@
                       >
                         View
                       </router-link>
+
                       <router-link
                         :to="{ name: 'AdminReportDetail', params: { id: report.post_id_for_comment } }"
                         class="btn btn-info btn-sm me-2"
@@ -139,6 +155,7 @@
                       >
                         View
                       </router-link>
+
                       <a
                         :href="`/profile/${report.reportable_id}`"
                         target="_blank"
@@ -166,34 +183,39 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
-
 const stats = ref({
   totalUsers: 0,
   totalPosts: 0,
-  totalReports: 0
+  pendingUserReports: 0,
+  pendingSentimentReports: 0
 })
-
-const allReports = ref([])
-const filterType = ref('All')
+const userReports = ref([])
+const sentimentReports = ref([])
+const activeTab = ref('user')
 const searchTerm = ref('')
-
+const loading = ref(true)
 const filteredReports = computed(() => {
-  return allReports.value.filter(report => {
-    const typeMatch = filterType.value === 'All' || report.type === filterType.value;
-    const searchMatch = !searchTerm.value ||
-      report.reason.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-      report.reported_by.toLowerCase().includes(searchTerm.value.toLowerCase());
-    return typeMatch && searchMatch;
+  const activeList = activeTab.value === 'user' ? userReports.value : sentimentReports.value;
+  if (!searchTerm.value) {
+    return activeList;
+  }
+
+  return activeList.filter(report => {
+    return report.reason.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+           report.reported_by.toLowerCase().includes(searchTerm.value.toLowerCase());
   });
 });
-
 const fetchData = async () => {
+  loading.value = true;
   try {
     const res = await axios.get('/api/admin/dashboard');
     stats.value = res.data.stats;
-    allReports.value = res.data.reports;
+    userReports.value = res.data.userReports;
+    sentimentReports.value = res.data.sentimentReports;
   } catch (error) {
     console.error("Failed to load dashboard data:", error);
+  } finally {
+    loading.value = false;
   }
 };
 
