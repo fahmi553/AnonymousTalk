@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('reportable_id')->nullable();
             $table->string('reportable_type')->nullable();
             $table->text('reason')->nullable();
+            $table->text('details')->nullable();
             $table->enum('status', ['pending', 'reviewed', 'resolved'])->default('pending');
             $table->timestamps();
 

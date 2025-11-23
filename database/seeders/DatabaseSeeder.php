@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
             PostSeeder::class,
             CommentSeeder::class,
             ReportSeeder::class,
+            TrustScoreLogSeeder::class,
+            BadgeSeeder::class,
         ]);
     }
 }

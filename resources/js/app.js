@@ -22,6 +22,9 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 import AppHeader from './Components/AppHeader.vue'
 import AppFooter from './Components/AppFooter.vue'
 import AdminReportDetail from './Components/admin/AdminReportDetail.vue'
+import ReportUserDetails from './Components/admin/AdminUserReportDetail.vue'
+import UserList from './Components/admin/UserList.vue';
+import SystemLogs from './Components/admin/SystemLogs.vue';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -31,16 +34,11 @@ const routes = [
   { path: '/profile/edit', component: ProfileEdit, name: 'profile.edit' },
   { path: '/profile/:id', component: ProfileView, name: 'profile.visit', props: true },
   { path: '/admin/login', component: AdminLogin, name: 'AdminLogin' },
-  {
-    path: '/admin/dashboard',
-    component: AdminDashboard,
-    name: 'AdminDashboard'
-  },
-  {
-    path: '/admin/report/:id',
-    component: AdminReportDetail,
-    name: 'AdminReportDetail'
-  },
+  { path: '/admin/dashboard', component: AdminDashboard, name: 'AdminDashboard'},
+  { path: '/admin/report/:id', component: AdminReportDetail, name: 'AdminReportDetail'},
+  { path: '/admin/report/user/:id', component: ReportUserDetails, name: 'ReportUserDetails'},
+  { path: '/admin/users', component: UserList, name: 'AdminUserList', eta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/logs', component: SystemLogs, name: 'SystemLogs', meta: { requiresAuth: true, requiresAdmin: true }},
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 

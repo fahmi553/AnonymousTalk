@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\Comment;
+use App\Models\TrustScoreLog;
 
 class AdminController extends Controller
 {
@@ -103,5 +104,107 @@ class AdminController extends Controller
         $report->delete();
 
         return response()->json(['message' => 'Report deleted successfully']);
+    }
+
+    public function getUserReportDetails($userId)
+    {
+        $user = User::where('user_id', $userId)->firstOrFail(); 
+        $reports = Report::where('reportable_type', User::class)
+            ->where('reportable_id', $userId)
+            ->with('reporter:user_id,username') 
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'user' => $user,
+            'reports' => $reports
+        ]);
+    }
+
+    /**
+     * Handle moderation actions (Ban, Warn, Dismiss).
+     */
+    public function moderateUser($id, $action)
+    {
+        $user = User::findOrFail($id);
+
+        switch ($action) {
+            case 'dismiss':
+                Report::where('reportable_type', User::class)
+                      ->where('reportable_id', $id)
+                      ->delete();
+                $message = "Reports dismissed.";
+                break;
+
+            case 'warn':
+                if ($user->trust_score > 0) {
+                    $user->decrement('trust_score', 10);
+                }
+                $message = "User has been warned.";
+                break;
+
+            case 'ban':
+                $user->delete();
+                $message = "User has been banned/deleted.";
+                break;
+
+            default:
+                return response()->json(['message' => 'Invalid action'], 400);
+        }
+
+        return response()->json(['message' => $message]);
+    }
+
+    public function getUsers(Request $request)
+    {
+        $query = User::query();
+        $query->select('user_id', 'username', 'email', 'trust_score', 'created_at');
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('username', 'like', "%{$searchTerm}%")
+                ->orWhere('email', 'like', "%{$searchTerm}%");
+            });
+        }
+        $users = $query->with('badges')
+                    ->orderBy('user_id', 'desc')
+                    ->paginate(10);
+
+        return response()->json($users);
+    }
+
+    public function getSystemLogs()
+    {
+        $logs = TrustScoreLog::with('user:user_id,username,email')
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return response()->json($logs);
+    }
+
+    public function adjustTrustScore(Request $request, $id)
+    {
+        $request->validate([
+            'score_change' => 'required|integer|not_in:0',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->increment('trust_score', $request->score_change);
+        $user->checkForBadges();
+        \App\Models\TrustScoreLog::create([
+            'user_id' => $user->user_id,
+            'action_type' => 'admin_adjustment',
+            'score_change' => $request->score_change,
+            'reason' => $request->reason,
+            'timestamp' => now(),
+        ]);
+        $user->load('badges');
+
+        return response()->json([
+            'message' => 'Trust score updated successfully.',
+            'new_score' => $user->trust_score,
+            'badges' => $user->badges
+        ]);
     }
 }

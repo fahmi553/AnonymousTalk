@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Badge;
 
 class User extends Authenticatable
 {
@@ -77,5 +78,20 @@ class User extends Authenticatable
     {
         $this->trust_score = max(0, $this->trust_score + $amount);
         $this->save();
+        $this->checkForBadges();
+    }
+
+    public function checkForBadges()
+    {
+        $eligibleBadges = Badge::where('trust_threshold', '<=', $this->trust_score)->get();
+        foreach ($eligibleBadges as $badge) {
+            if (!$this->badges->contains($badge->badge_id)) {
+                $this->badges()->attach($badge->badge_id, [
+                    'awarded_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+        }
     }
 }

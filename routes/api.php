@@ -63,4 +63,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
     Route::delete('/admin/reports/{id}', [AdminController::class, 'deleteReport']);
     Route::get('/admin/report-details/{postId}', [AdminController::class, 'showReportDetails']);
+    Route::get('/admin/user-report-details/{id}', [AdminController::class, 'getUserReportDetails']);
+    Route::post('/moderate/user/{id}/{action}', [AdminController::class, 'moderateUser']);
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::get('/admin/logs', [AdminController::class, 'getSystemLogs']);
+    Route::post('/admin/user/{id}/adjust-score', [AdminController::class, 'adjustTrustScore']);
 });

@@ -70,32 +70,49 @@
             >
               <i class="fas fa-robot me-2"></i> Pending Flagged Posts
             </a>
-            <a
-              href="#"
-              class="list-group-item list-group-item-action disabled"
-              title="Coming Soon"
+            <router-link 
+              to="/admin/users" 
+              class="list-group-item list-group-item-action"
+              active-class="active"
             >
               <i class="fas fa-shield-alt me-2"></i> User Trust Scores
-            </a>
+            </router-link>
+            <router-link 
+              to="/admin/logs" 
+              class="list-group-item list-group-item-action"
+              active-class="active"
+            >
+              <i class="fas fa-file-signature me-2"></i> View System Logs
+            </router-link>
           </div>
         </div>
       </div>
       <div class="col-lg-9">
         <div class="card bg-body shadow-sm border-0 rounded-lg">
           <div class="card-header bg-body py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h6 class="fw-bold mb-0 text-body-emphasis">
+            <h6 class="fw-bold mb-0 text-body-emphasis me-auto">
               {{ activeTab === 'user' ? 'Pending User Reports' : 'Pending Flagged Posts' }}
             </h6>
-            <div class="input-group" style="max-width: 250px;">
-              <span class="input-group-text bg-body-tertiary"><i class="fas fa-search"></i></span>
-              <input
-                type="text"
-                class="form-control bg-body"
-                placeholder="Search reasons..."
-                v-model="searchTerm"
-              />
+            <div class="d-flex gap-2">
+              <select v-model="selectedType" class="form-select form-select-sm bg-body" style="width: auto;">
+                <option value="All">All Types</option>
+                <option value="Post">Posts</option>
+                <option value="Comment">Comments</option>
+                <option value="User">Users</option>
+              </select>
+
+              <div class="input-group input-group-sm" style="max-width: 250px;">
+                <span class="input-group-text bg-body-tertiary"><i class="fas fa-search"></i></span>
+                <input
+                  type="text"
+                  class="form-control bg-body"
+                  placeholder="Search reasons..."
+                  v-model="searchTerm"
+                />
+              </div>
             </div>
           </div>
+
           <div class="card-body p-0">
             <div class="table-responsive">
               <table class="table table-hover bg-body mb-0">
@@ -111,11 +128,11 @@
                 <tbody>
                   <tr v-if="filteredReports.length === 0">
                     <td colspan="5" class="text-center text-muted p-4">
-                      <span v-if="!searchTerm">No pending reports found.</span>
-                      <span v-else>No reports found matching your search.</span>
+                      <span v-if="!searchTerm && selectedType === 'All'">No pending reports found.</span>
+                      <span v-else>No reports found matching your criteria.</span>
                     </td>
                   </tr>
-
+                  
                   <tr v-for="report in filteredReports" :key="report.id">
                     <td class="ps-3">
                       <span
@@ -132,7 +149,7 @@
                       {{ report.reported_by }}
                     </td>
                     <td>{{ report.reason }}</td>
-
+                    
                     <td>
                       <span class="badge text-bg-warning text-capitalize">
                         {{ report.status }}
@@ -140,31 +157,30 @@
                     </td>
 
                     <td>
-                      <router-link
-                        :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
-                        class="btn btn-primary btn-sm me-2"
-                        v-if="report.type === 'Post'"
-                      >
-                        View
-                      </router-link>
+                    <router-link
+                      :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
+                      class="btn btn-primary btn-sm me-2"
+                      v-if="report.type === 'Post'"
+                    >
+                      View
+                    </router-link>
+                    
+                    <router-link
+                      :to="{ name: 'AdminReportDetail', params: { id: report.post_id_for_comment } }"
+                      class="btn btn-info btn-sm me-2"
+                      v-else-if="report.type === 'Comment' && report.post_id_for_comment"
+                    >
+                      View
+                    </router-link>
 
-                      <router-link
-                        :to="{ name: 'AdminReportDetail', params: { id: report.post_id_for_comment } }"
-                        class="btn btn-info btn-sm me-2"
-                        v-else-if="report.type === 'Comment' && report.post_id_for_comment"
-                      >
-                        View
-                      </router-link>
-
-                      <a
-                        :href="`/profile/${report.reportable_id}`"
-                        target="_blank"
-                        class="btn btn-warning btn-sm me-2"
-                        v-else-if="report.type === 'User'"
-                      >
-                        View
-                      </a>
-
+                    <router-link
+                      :to="{ name: 'ReportUserDetails', params: { id: report.reportable_id } }"
+                      class="btn btn-warning btn-sm me-2"
+                      v-else-if="report.type === 'User'"
+                    >
+                      View
+                    </router-link>
+                      
                       <button class="btn btn-danger btn-sm" @click="deleteReport(report.id)">
                         Delete
                       </button>
@@ -183,32 +199,37 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
+
 const stats = ref({
   totalUsers: 0,
   totalPosts: 0,
   pendingUserReports: 0,
   pendingSentimentReports: 0
 })
+
 const userReports = ref([])
 const sentimentReports = ref([])
 const activeTab = ref('user')
 const searchTerm = ref('')
+const selectedType = ref('All')
 const loading = ref(true)
 const filteredReports = computed(() => {
   const activeList = activeTab.value === 'user' ? userReports.value : sentimentReports.value;
-  if (!searchTerm.value) {
-    return activeList;
-  }
 
   return activeList.filter(report => {
-    return report.reason.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+    const typeMatch = selectedType.value === 'All' || report.type === selectedType.value;
+    const searchMatch = !searchTerm.value ||
+           report.reason.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
            report.reported_by.toLowerCase().includes(searchTerm.value.toLowerCase());
+
+    return typeMatch && searchMatch;
   });
 });
+
 const fetchData = async () => {
   loading.value = true;
   try {
-    const res = await axios.get('/api/admin/dashboard');
+    const res = await axios.get('/api/admin/dashboard'); 
     stats.value = res.data.stats;
     userReports.value = res.data.userReports;
     sentimentReports.value = res.data.sentimentReports;
@@ -225,7 +246,7 @@ const deleteReport = async (id) => {
   if (confirm('Are you sure you want to delete this report?')) {
     try {
       await axios.delete(`/api/admin/reports/${id}`);
-      fetchData();
+      fetchData(); 
     } catch (error) {
       console.error("Failed to delete report:", error);
       alert("Could not delete the report.");

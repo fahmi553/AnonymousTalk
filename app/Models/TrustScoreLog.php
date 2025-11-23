@@ -11,6 +11,8 @@ class TrustScoreLog extends Model
 
     protected $primaryKey = 'log_id';
 
+    protected $table = 'trust_score_logs';
+
     protected $fillable = [
         'user_id',
         'action_type',
