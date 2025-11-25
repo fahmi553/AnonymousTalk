@@ -68,4 +68,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/users', [AdminController::class, 'getUsers']);
     Route::get('/admin/logs', [AdminController::class, 'getSystemLogs']);
     Route::post('/admin/user/{id}/adjust-score', [AdminController::class, 'adjustTrustScore']);
+    Route::get('/admin/flagged-posts', [AdminController::class, 'getFlaggedPosts']);
 });

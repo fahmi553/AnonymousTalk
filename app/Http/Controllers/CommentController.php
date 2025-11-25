@@ -6,6 +6,9 @@ use App\Models\Comment;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use App\Models\CommentSentimentLog;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CommentController extends Controller
 {
@@ -14,19 +17,25 @@ class CommentController extends Controller
         $comments = Comment::with([
                 'user',
                 'parentComment.user',
+                'replies' => function($q) {
+                    $q->whereDoesntHave('reports', function ($subQ) {
+                        $subQ->whereNull('reporter_id')->where('status', 'pending');
+                    });
+                },
                 'replies.user',
                 'replies.parentComment.user',
                 'replies.replies'
             ])
             ->where('post_id', $postId)
             ->whereNull('parent_id')
+            ->whereDoesntHave('reports', function ($q) {
+                $q->whereNull('reporter_id')->where('status', 'pending');
+            })
             ->oldest()
             ->get();
 
         $comments->loadMissing('replies.parentComment.user', 'replies.replies.parentComment.user');
-
         $payload = $comments->map(fn($c) => $this->formatComment($c));
-
         return response()->json($payload->values());
     }
 
@@ -57,22 +66,72 @@ class CommentController extends Controller
     {
         $request->validate([
             'post_id'   => 'required|exists:posts,post_id',
-            'content'   => 'required|string',
+            'content'   => 'required|string|max:1000',
             'parent_id' => 'nullable|exists:comments,comment_id',
         ]);
 
+        $sentimentLabel = 'POSITIVE';
+        $confidence = 0.0;
+        $isToxic = false;
+
+        try {
+            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', [
+                'text' => $request->content,
+            ]);
+
+            if ($response->successful()) {
+                $aiResult = $response->json();
+                $sentimentLabel = $aiResult['result'];
+                $confidence = $aiResult['confidence'];
+                
+                if ($sentimentLabel === 'NEGATIVE') {
+                    $isToxic = true;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("Sentiment AI Offline");
+        }
+
         $comment = Comment::create([
-            'post_id'   => $request->post_id,
-            'user_id'   => auth()->id(),
-            'content'   => $request->content,
-            'parent_id' => $request->parent_id,
+            'post_id'         => $request->post_id,
+            'user_id'         => auth()->id(),
+            'content'         => $request->content,
+            'parent_id'       => $request->parent_id,
+            'sentiment_score' => $confidence, 
         ]);
 
-        $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_REWARD);
+        CommentSentimentLog::create([
+            'comment_id'      => $comment->comment_id,
+            'sentiment_score' => $confidence,
+            'result'          => $sentimentLabel,
+            'created_at'      => now(),
+        ]);
+
+        if ($isToxic) {
+            \App\Models\Report::create([
+                'reporter_id'     => null, // System
+                'reportable_id'   => $comment->comment_id,
+                'reportable_type' => Comment::class,
+                'reason'          => 'High Negative Sentiment',
+                'details'         => "AI detected toxic comment (" . round($confidence * 100, 1) . "%).",
+                'status'          => 'pending',
+            ]);
+
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY, 'Toxic Comment Flagged');
+        } else {
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_REWARD, 'Comment Posted');
+        }
 
         $comment->load(['user', 'parentComment.user', 'replies']);
-
-        return response()->json($this->formatComment($comment));
+        $responsePayload = $this->formatComment($comment);
+        
+        return response()->json([
+            'data' => $responsePayload,
+            'is_flagged' => $isToxic,
+            'message' => $isToxic 
+                ? '⚠️ Comment submitted but held for moderation.' 
+                : 'Comment posted successfully!'
+        ]);
     }
 
     public function destroy($id)
@@ -99,7 +158,7 @@ class CommentController extends Controller
         }
 
         if ($comment->user) {
-            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY);
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted');
         }
 
         $comment->delete();
@@ -115,15 +174,15 @@ class CommentController extends Controller
 
         $report = \App\Models\Report::create([
             'reportable_type' => Comment::class,
-            'reportable_id' => $comment->comment_id,
-            'user_id' => $request->user()->user_id,
-            'reason' => $request->reason,
-            'status' => 'pending',
+            'reportable_id'   => $comment->comment_id,
+            'user_id'         => $request->user()->user_id,
+            'reason'          => $request->reason,
+            'status'          => 'pending',
         ]);
 
         return response()->json([
             'message' => 'Comment reported successfully.',
-            'report' => $report,
+            'report'  => $report,
         ]);
     }
 

@@ -25,6 +25,7 @@ import AdminReportDetail from './Components/admin/AdminReportDetail.vue'
 import ReportUserDetails from './Components/admin/AdminUserReportDetail.vue'
 import UserList from './Components/admin/UserList.vue';
 import SystemLogs from './Components/admin/SystemLogs.vue';
+import AppSidebar from './Components/AppSidebar.vue'
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -59,7 +60,8 @@ app.use(router)
 app.component('comment-form', CommentForm)
 app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
-app.mount('#app') // This mounts all your pages
+app.component('app-sidebar', AppSidebar)
+app.mount('#app')
 
 const headerApp = createApp(AppHeader)
 headerApp.use(router)

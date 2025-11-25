@@ -17,11 +17,12 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->integer('trust_score')->default(0);
+            $table->integer('ban')->default(0);
             $table->enum('role', ['admin', 'moderator', 'user'])->default('user');
-            $table->unsignedBigInteger('badge_id')->nullable();
+            // $table->unsignedBigInteger('badge_id')->nullable();
             $table->timestamps();
 
-            $table->foreign('badge_id')->references('badge_id')->on('badges')->nullOnDelete();
+            // $table->foreign('badge_id')->references('badge_id')->on('badges')->nullOnDelete();
         });
     }
 

@@ -79,27 +79,15 @@
           <i class="fas fa-comments me-2 text-primary"></i> Comments
         </h4>
 
-        <div v-if="authUserId" class="d-flex mt-3 mb-4">
-          <div class="me-3 flex-shrink-0">
-            <div
-              class="rounded-circle bg-body-secondary text-body-emphasis d-flex align-items-center justify-content-center"
-              style="width: 40px; height: 40px; font-weight: bold;"
-            >
-              {{ authUserIdInitial }}
-            </div>
-          </div>
-          <div class="flex-grow-1">
-            <textarea
-              v-model="newComment"
-              class="form-control bg-body mb-2"
-              rows="3"
-              placeholder="Write a comment..."
-            ></textarea>
-            <button class="btn btn-sm btn-primary" @click="submitComment">
-              <i class="fas fa-paper-plane me-1"></i> Submit Comment
-            </button>
-          </div>
+        <div v-if="authUserId">
+          <CommentForm 
+            :post-id="post.post_id" 
+            :auth-user-id="authUserId" 
+            :user-initial="authUserIdInitial"
+            @success="handleCommentSuccess"
+          />
         </div>
+        
         <p v-else class="text-muted mt-3 alert alert-secondary">
           Please <a href="/login" class="fw-bold">login</a> to comment on this post.
         </p>
@@ -185,8 +173,8 @@
           </div>
         </div>
       </div>
-
-      <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" :class="toastClass" role="alert" aria-live="assertive" aria-atomic="true" ref="toastEl">
           <div class="d-flex">
             <div class="toast-body">{{ toastMessage }}</div>
@@ -194,7 +182,6 @@
           </div>
         </div>
       </div>
-    </div>
   </div>
 </template>
 
@@ -204,6 +191,7 @@ import { useRoute } from "vue-router"
 import axios from "axios"
 import { Modal, Toast } from "bootstrap"
 import CommentThread from "../CommentThread.vue"
+import CommentForm from "./CommentForm.vue"
 
 axios.defaults.withCredentials = true
 
@@ -211,11 +199,9 @@ const route = useRoute()
 const postId = route.params.id
 const authUserId = window.authUserId || null
 const authUserIdInitial = window.authUserName ? window.authUserName.charAt(0).toUpperCase() : "?"
-
 const post = ref({ comments: [] })
 const loading = ref(true)
 const error = ref("")
-const newComment = ref("")
 const deleteTargetId = ref(null)
 const deleteModal = ref(null)
 const deletePostModal = ref(null)
@@ -223,14 +209,11 @@ const reportModal = ref(null)
 const reportTargetId = ref(null)
 const reportType = ref('post')
 const reportReason = ref("")
-
 const toastMessage = ref("")
 const toastClass = ref("bg-success")
 const toastEl = ref(null)
 let toastInstance = null
-
 const categories = ref([])
-
 const openReportModal = (targetId, type = 'comment') => {
   reportTargetId.value = targetId
   reportType.value = type
@@ -243,13 +226,11 @@ const submitReport = async () => {
   if (!reportReason.value.trim()) return
   try {
     await axios.get("/sanctum/csrf-cookie")
-
     await axios.post("/api/report", {
       target_id: reportTargetId.value,
       type: reportType.value,
       reason: reportReason.value.trim(),
     })
-
     showToast("Report submitted successfully")
     Modal.getInstance(reportModal.value).hide()
   } catch (err) {
@@ -267,7 +248,11 @@ const openDeletePostModal = () => {
 
 const showToast = (message, type = "success") => {
   toastMessage.value = message
-  toastClass.value = type === "success" ? "bg-success" : "bg-danger"
+  if (type === "warning") {
+      toastClass.value = "bg-warning text-dark";
+  } else {
+      toastClass.value = type === "success" ? "bg-success" : "bg-danger";
+  }
   if (!toastInstance) toastInstance = new Toast(toastEl.value)
   toastInstance.show()
 }
@@ -279,6 +264,27 @@ const fetchCategories = async () => {
   } catch (err) {
     console.error('Failed to load categories', err)
   }
+}
+
+const loadPost = async (silent = false) => {
+  if (!silent) loading.value = true
+  
+  try {
+    const res = await axios.get(`/api/posts/${postId}`)
+    post.value = res.data
+    post.value.comments = post.value.comments || []
+    post.value.comments.forEach(c => c.replies = c.replies || [])
+  } catch (e) {
+    console.error(e)
+    if (!silent) error.value = "Failed to load post."
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleCommentSuccess = () => {
+    loadPost(true);
+    showToast("Comment added successfully", "success");
 }
 
 const confirmDeletePost = async () => {
@@ -293,19 +299,6 @@ const confirmDeletePost = async () => {
     showToast("Failed to delete post", "error")
     Modal.getInstance(deletePostModal.value).hide()
   }
-}
-
-const getCategoryColor = (categoryName) => {
-  const cat = categories.value.find(c => c.name === categoryName)
-  return cat ? cat.color_code : '#6c757d'
-}
-
-const handleDelete = (id) => {
-  const removeRecursively = (comments) =>
-    comments
-      .filter(c => c.comment_id !== id)
-      .map(c => ({ ...c, replies: removeRecursively(c.replies || []) }))
-  if (post.value?.comments) post.value.comments = removeRecursively(post.value.comments)
 }
 
 const openDeleteModal = (id) => {
@@ -329,19 +322,17 @@ const confirmDelete = async () => {
   }
 }
 
-const loadPost = async () => {
-  loading.value = true
-  try {
-    const res = await axios.get(`/api/posts/${postId}`)
-    post.value = res.data
-    post.value.comments = post.value.comments || []
-    post.value.comments.forEach(c => c.replies = c.replies || [])
-  } catch (e) {
-    console.error(e)
-    error.value = "Failed to load post."
-  } finally {
-    loading.value = false
-  }
+const handleDelete = (id) => {
+  const removeRecursively = (comments) =>
+    comments
+      .filter(c => c.comment_id !== id)
+      .map(c => ({ ...c, replies: removeRecursively(c.replies || []) }))
+  if (post.value?.comments) post.value.comments = removeRecursively(post.value.comments)
+}
+
+const getCategoryColor = (categoryName) => {
+  const cat = categories.value.find(c => c.name === categoryName)
+  return cat ? cat.color_code : '#6c757d'
 }
 
 const toggleLike = async (post) => {
@@ -355,36 +346,24 @@ const toggleLike = async (post) => {
   }
 }
 
-const submitComment = async () => {
-  if (!newComment.value.trim()) return
-  try {
-    await axios.get("/sanctum/csrf-cookie")
-    await axios.post("/api/comments", {
-      post_id: postId,
-      user_id: authUserId,
-      content: newComment.value.trim()
-    })
-    newComment.value = ""
-    await loadPost()
-    showToast("Comment added successfully")
-  } catch (e) {
-    console.error(e)
-    showToast("Failed to submit comment", "error")
-  }
-}
-
 const handleReply = async ({ parent_id, content }) => {
   if (!content?.trim()) return
   try {
     await axios.get("/sanctum/csrf-cookie")
-    await axios.post("/api/comments", {
+    const res = await axios.post("/api/comments", {
       post_id: postId,
       user_id: authUserId,
       content: content.trim(),
       parent_id,
     })
-    await loadPost()
-    showToast("Reply added successfully")
+
+    if (res.data.is_flagged) {
+        showToast(res.data.message, "warning");
+    } else {
+        showToast("Reply added successfully", "success");
+        await loadPost()
+    }
+
   } catch (e) {
     console.error("Failed to post reply", e)
     showToast("Failed to post reply", "error")

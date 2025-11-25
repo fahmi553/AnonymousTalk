@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Http\Log;
 use Illuminate\Support\Str;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use App\Models\Like;
 use Illuminate\Support\Facades\DB;
+use App\Models\PostSentimentLog;
+use Illuminate\Validation\Rule;
 
 class PostController extends Controller
 {
@@ -22,6 +26,8 @@ class PostController extends Controller
             'user',
             'categoryModel',
         ])->withCount(['likes', 'comments']);
+
+        $query->where('status', 'published');
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -121,20 +127,67 @@ class PostController extends Controller
             'category_id' => 'required|exists:categories,category_id',
         ]);
 
+        $sentimentLabel = 'POSITIVE'; 
+        $confidence = 0.0;
+        $status = 'published';
+
+        try {
+            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', [
+                'text' => $validated['content'],
+            ]);
+
+            if ($response->successful()) {
+                $aiResult = $response->json();
+                $sentimentLabel = $aiResult['result']; 
+                $confidence = $aiResult['confidence'];
+
+                if ($sentimentLabel === 'NEGATIVE') {
+                    $status = 'moderated';
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning("Sentiment AI Offline: " . $e->getMessage());
+        }
+
         $post = Post::create([
-            'user_id'     => auth()->id(),
-            'category_id' => $validated['category_id'],
-            'title'       => $validated['title'],
-            'content'     => $validated['content'],
+            'user_id'         => auth()->id(),
+            'category_id'     => $validated['category_id'],
+            'title'           => $validated['title'],
+            'content'         => $validated['content'],
+            'sentiment_score' => $confidence,
+            'status'          => $status, 
         ]);
 
-        $post->user->updateTrustScore(User::TRUST_SCORE_POST_REWARD);
+        PostSentimentLog::create([
+            'post_id'         => $post->post_id,
+            'sentiment_score' => $confidence,
+            'result'          => $sentimentLabel,
+            'created_at'      => now(),
+        ]);
+
+        if ($status === 'moderated') {
+            \App\Models\Report::create([
+                'reporter_id'     => null,
+                'reportable_id'   => $post->post_id,
+                'reportable_type' => Post::class,
+                'reason'          => 'High Negative Sentiment',
+                'details'         => "AI detected toxic content with " . round($confidence * 100, 1) . "% confidence.",
+                'status'          => 'pending',
+            ]);
+            
+            $post->user->updateTrustScore(User::TRUST_SCORE_POST_PENALTY, 'Post Flagged as Toxic');
+        } else {
+            $post->user->updateTrustScore(User::TRUST_SCORE_POST_REWARD, 'Post Published: ' . substr($post->title, 0, 20));
+        }
 
         return response()->json([
             'post_id'    => $post->post_id,
             'title'      => $post->title,
-            'content'    => $post->content,
+            'status'     => $status,
             'created_at' => $post->created_at->toISOString(),
+            'message'    => $status === 'moderated' 
+                            ? '⚠️ Post submitted but held for moderation due to toxic content.' 
+                            : '✅ Post published successfully!'
         ], 201);
     }
 
@@ -152,7 +205,7 @@ class PostController extends Controller
             }
 
             if ($post->user) {
-                $post->user->updateTrustScore(User::TRUST_SCORE_POST_PENALTY);
+                $post->user->updateTrustScore(User::TRUST_SCORE_POST_PENALTY, 'Post Deleted by User/Admin');
             }
 
             $post->delete();
@@ -170,7 +223,7 @@ class PostController extends Controller
         }
 
         if ($comment->user) {
-            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY);
+            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted Recursively');
         }
 
         $comment->delete();
@@ -229,17 +282,21 @@ class PostController extends Controller
         $post = Post::with([
                 'user',
                 'categoryModel',
-                'comments' => fn($q) => $q->whereNull('parent_id')->with([
-                    'user',
-                    'parentComment.user',
-                    'replies.user',
-                    'replies.parentComment.user',
-                    'replies.replies.user',
-                ]),
+                'comments' => fn($q) => $q->whereNull('parent_id')
+                    ->whereDoesntHave('reports', function ($subQ) {
+                        $subQ->whereNull('reporter_id')->where('status', 'pending');
+                    })
+                    ->with([
+                        'user',
+                        'parentComment.user',
+                        'replies.user',
+                        'replies.parentComment.user',
+                        'replies.replies.user',
+                    ]),
             ])
             ->withCount(['likes', 'comments'])
             ->findOrFail($postId);
-
+        
         $liked = auth()->check()
             ? \App\Models\Like::where('post_id', $post->post_id)
                 ->where('user_id', auth()->id())
@@ -281,7 +338,7 @@ class PostController extends Controller
         ];
     }
 
-        public function getTrendingPosts()
+    public function getTrendingPosts()
     {
         $trendingPosts = Post::query()
             ->with([
@@ -290,9 +347,8 @@ class PostController extends Controller
             ])
             ->withCount(['likes', 'comments'])
             ->where('created_at', '>=', now()->subHours(72))
-            ->selectRaw('*, (likes_count + (comments_count * 2)) as trending_score')
-            ->orderBy('trending_score', 'desc')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('comments_count', 'desc')
+            ->orderBy('likes_count', 'desc')
             ->limit(5)
             ->get();
 

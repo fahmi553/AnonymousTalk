@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Badge;
+use App\Models\TrustScoreLog;
 
 class User extends Authenticatable
 {
@@ -74,10 +75,20 @@ class User extends Authenticatable
         return $this->hasMany(Like::class, 'user_id');
     }
 
-    public function updateTrustScore($amount)
+    public function updateTrustScore($amount, $reason = 'Activity Reward/Penalty')
     {
         $this->trust_score = max(0, $this->trust_score + $amount);
         $this->save();
+
+        TrustScoreLog::create([
+            'user_id' => $this->user_id,
+            'action_type' => $amount >= 0 ? 'reward' : 'penalty',
+            'score_change' => $amount,
+            'reason' => $reason,
+            'timestamp' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $this->checkForBadges();
     }
 

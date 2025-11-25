@@ -26,6 +26,7 @@ class AdminController extends Controller
             'pendingUserReports' => $pendingUserReports,
             'pendingSentimentReports' => $pendingSentimentReports,
         ];
+
         $userReports = Report::with('reporter:user_id,username')
             ->where('status', 'pending')
             ->whereNotNull('reporter_id')
@@ -33,6 +34,7 @@ class AdminController extends Controller
             ->take(50)
             ->get()
             ->map(fn($report) => $this->formatReport($report));
+
         $sentimentReports = Report::where('status', 'pending')
             ->whereNull('reporter_id')
             ->latest()
@@ -40,27 +42,38 @@ class AdminController extends Controller
             ->get()
             ->map(fn($report) => $this->formatReport($report));
 
-
         return response()->json([
             'stats' => $stats,
             'userReports' => $userReports,
             'sentimentReports' => $sentimentReports,
         ]);
     }
+
+    public function getFlaggedContent()
+    {
+        $reports = Report::where('status', 'pending')
+            ->whereNull('reporter_id')
+            ->latest()
+            ->get()
+            ->map(fn($report) => $this->formatReport($report));
+
+        return response()->json($reports);
+    }
+
     private function formatReport($report)
     {
         $type = 'Unknown';
         $postIdForComment = null;
 
-        if ($report->reportable_type === Post::class) {
+        if ($report->reportable_type === Post::class || $report->reportable_type === 'App\\Models\\Post') {
             $type = 'Post';
-        } elseif ($report->reportable_type === Comment::class) {
+        } elseif ($report->reportable_type === Comment::class || $report->reportable_type === 'App\\Models\\Comment') {
             $type = 'Comment';
             $comment = Comment::find($report->reportable_id);
             if ($comment) {
                 $postIdForComment = $comment->post_id;
             }
-        } elseif ($report->reportable_type === User::class) {
+        } elseif ($report->reportable_type === User::class || $report->reportable_type === 'App\\Models\\User') {
             $type = 'User';
         }
 
@@ -73,26 +86,51 @@ class AdminController extends Controller
             'reportable_type' => $report->reportable_type,
             'post_id_for_comment' => $postIdForComment,
             'status' => $report->status,
+            'created_at' => $report->created_at,
         ];
     }
-    public function showReportDetails($postId)
-    {
-        $post = Post::with('categoryModel')->findOrFail($postId);
-        $reports = Report::with('reporter:user_id,username')
-            ->where('reportable_type', Post::class)
-            ->where('reportable_id', $postId)
-            ->where('status', 'pending')
-            // ->whereNotNull('reporter_id')
-            ->get();
 
-        return response()->json([
-            'post' => [
-                'title' => $post->title,
-                'content' => $post->content,
-                'category' => $post->categoryModel->name ?? 'None',
-            ],
-            'reports' => $reports
-        ]);
+    public function showReportDetails($id)
+    {
+        $post = Post::with('categoryModel')->find($id);
+        if ($post) {
+            $reports = Report::with('reporter:user_id,username')
+                ->where('reportable_type', Post::class)
+                ->where('reportable_id', $id)
+                ->get();
+
+            return response()->json([
+                'type' => 'Post',
+                'content' => [
+                    'title' => $post->title,
+                    'body' => $post->content,
+                    'category' => $post->categoryModel->name ?? 'None',
+                    'author' => $post->user->username ?? 'Anonymous'
+                ],
+                'reports' => $reports
+            ]);
+        } 
+        
+        $comment = Comment::with('user', 'post')->find($id);
+        if ($comment) {
+            $reports = Report::with('reporter:user_id,username')
+                ->where('reportable_type', Comment::class)
+                ->where('reportable_id', $id)
+                ->get();
+
+            return response()->json([
+                'type' => 'Comment',
+                'content' => [
+                    'title' => 'Comment on Post #' . $comment->post_id,
+                    'body' => $comment->content,
+                    'category' => 'Comment',
+                    'author' => $comment->user->username ?? 'Unknown'
+                ],
+                'reports' => $reports
+            ]);
+        }
+
+        return response()->json(['error' => 'Content not found'], 404);
     }
 
     /**
@@ -206,5 +244,15 @@ class AdminController extends Controller
             'new_score' => $user->trust_score,
             'badges' => $user->badges
         ]);
+    }
+
+    public function getFlaggedPosts()
+    {
+        $flaggedPosts = Post::with('user')
+            ->where('status', 'moderated') 
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($flaggedPosts);
     }
 }

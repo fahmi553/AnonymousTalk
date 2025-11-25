@@ -42,7 +42,10 @@ class Comment extends Model
    public function replies()
     {
         return $this->hasMany(Comment::class, 'parent_id')
-                    ->with(['user', 'replies', 'parentComment.user']);
+            ->whereDoesntHave('reports', function ($q) {
+                $q->whereNull('reporter_id')->where('status', 'pending');
+            })
+            ->with(['user', 'replies', 'parentComment.user']);
     }
 
     public function parentComment()
@@ -53,5 +56,10 @@ class Comment extends Model
     public function scopeVisible($query)
     {
         return $query->where('status', 'visible');
+    }
+
+    public function reports()
+    {
+        return $this->morphMany(\App\Models\Report::class, 'reportable');
     }
 }

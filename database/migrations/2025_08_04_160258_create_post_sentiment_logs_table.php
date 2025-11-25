@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('log_id');
 
             $table->unsignedBigInteger('post_id');
-            $table->decimal('sentiment_score', 5, 2);
+            $table->decimal('sentiment_score', 8, 6);
             $table->string('result');
             $table->timestamps();
 

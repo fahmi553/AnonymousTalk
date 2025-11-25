@@ -126,6 +126,7 @@
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { debounce } from 'lodash';
+import AdminStats from './AdminStats.vue';
 
 const users = ref({ data: [], links: {}, meta: {} });
 const loading = ref(false);

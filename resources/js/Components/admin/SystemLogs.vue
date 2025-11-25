@@ -98,6 +98,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import AdminStats from './AdminStats.vue';
 
 const logs = ref({ data: [], links: {}, meta: {} });
 const loading = ref(false);
