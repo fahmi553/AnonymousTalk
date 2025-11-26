@@ -20,12 +20,18 @@ class PostController extends Controller
     {
         $query = Post::with([
             'comments' => function ($q) {
-                $q->orderBy('created_at', 'asc');
+                $q->where('status', 'published')
+                  ->orderBy('created_at', 'asc');
             },
             'comments.user',
             'user',
             'categoryModel',
-        ])->withCount(['likes', 'comments']);
+        ])->withCount([
+            'likes',
+            'comments' => function ($q) {
+                $q->where('status', 'published');
+            }
+        ]);
 
         $query->where('status', 'published');
 
@@ -97,6 +103,7 @@ class PostController extends Controller
                     ];
                 }),
                 'likes_count' => $post->likes_count,
+                'comments_count' => $post->comments_count,
                 'liked'       => in_array($post->post_id, $likedPostIds),
             ];
         });
@@ -121,74 +128,77 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title'       => 'required|string|max:255',
+        $request->validate([
+            'title'       => 'nullable|string|max:255',
             'content'     => 'required|string',
             'category_id' => 'required|exists:categories,category_id',
         ]);
 
-        $sentimentLabel = 'POSITIVE'; 
+        $sentimentLabel = 'POSITIVE';
         $confidence = 0.0;
+        $isToxic = false;
         $status = 'published';
+        $textToAnalyze = $request->title
+            ? $request->title . ". " . $request->content
+            : $request->content;
 
         try {
             $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', [
-                'text' => $validated['content'],
+                'text' => $textToAnalyze,
             ]);
 
             if ($response->successful()) {
                 $aiResult = $response->json();
-                $sentimentLabel = $aiResult['result']; 
+                $sentimentLabel = $aiResult['result'];
                 $confidence = $aiResult['confidence'];
 
                 if ($sentimentLabel === 'NEGATIVE') {
+                    $isToxic = true;
                     $status = 'moderated';
                 }
             }
         } catch (\Exception $e) {
-            \Log::warning("Sentiment AI Offline: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
         }
 
         $post = Post::create([
             'user_id'         => auth()->id(),
-            'category_id'     => $validated['category_id'],
-            'title'           => $validated['title'],
-            'content'         => $validated['content'],
+            'category_id'     => $request->category_id,
+            'title'           => $request->title,
+            'content'         => $request->content,
             'sentiment_score' => $confidence,
-            'status'          => $status, 
+            'status'          => $status,
         ]);
 
-        PostSentimentLog::create([
+        \App\Models\PostSentimentLog::create([
             'post_id'         => $post->post_id,
             'sentiment_score' => $confidence,
             'result'          => $sentimentLabel,
             'created_at'      => now(),
         ]);
 
-        if ($status === 'moderated') {
+        if ($isToxic) {
             \App\Models\Report::create([
                 'reporter_id'     => null,
                 'reportable_id'   => $post->post_id,
                 'reportable_type' => Post::class,
                 'reason'          => 'High Negative Sentiment',
-                'details'         => "AI detected toxic content with " . round($confidence * 100, 1) . "% confidence.",
+                'details'         => "AI detected toxic post content (" . round($confidence * 100, 1) . "%).",
                 'status'          => 'pending',
             ]);
-            
-            $post->user->updateTrustScore(User::TRUST_SCORE_POST_PENALTY, 'Post Flagged as Toxic');
+
+            $post->user->updateTrustScore(\App\Models\User::TRUST_SCORE_POST_PENALTY, 'Toxic Post Flagged');
         } else {
-            $post->user->updateTrustScore(User::TRUST_SCORE_POST_REWARD, 'Post Published: ' . substr($post->title, 0, 20));
+            $post->user->updateTrustScore(\App\Models\User::TRUST_SCORE_POST_REWARD, 'Post Submitted');
         }
 
         return response()->json([
-            'post_id'    => $post->post_id,
-            'title'      => $post->title,
-            'status'     => $status,
-            'created_at' => $post->created_at->toISOString(),
-            'message'    => $status === 'moderated' 
-                            ? '⚠️ Post submitted but held for moderation due to toxic content.' 
-                            : '✅ Post published successfully!'
-        ], 201);
+            'message' => $isToxic
+                ? '⚠️ Post submitted but held for moderation.'
+                : 'Post created successfully!',
+            'status' => $isToxic ? 'warning' : 'success',
+            'post' => $post
+        ]);
     }
 
     public function destroy($id)
@@ -296,7 +306,7 @@ class PostController extends Controller
             ])
             ->withCount(['likes', 'comments'])
             ->findOrFail($postId);
-        
+
         $liked = auth()->check()
             ? \App\Models\Like::where('post_id', $post->post_id)
                 ->where('user_id', auth()->id())

@@ -22,6 +22,7 @@ class Post extends Model
         'sentiment_score',
         'status',
         'hidden_in_profile',
+        'status',
     ];
 
     protected $casts = [

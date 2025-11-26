@@ -18,6 +18,7 @@ class Comment extends Model
         'sentiment_score',
         'parent_id',
         'hidden_in_profile',
+        'status',
     ];
 
     protected $casts = [
@@ -39,12 +40,10 @@ class Comment extends Model
         return $this->hasMany(CommentSentimentLog::class, 'comment_id');
     }
 
-   public function replies()
+    public function replies()
     {
         return $this->hasMany(Comment::class, 'parent_id')
-            ->whereDoesntHave('reports', function ($q) {
-                $q->whereNull('reporter_id')->where('status', 'pending');
-            })
+            ->where('status', 'published')
             ->with(['user', 'replies', 'parentComment.user']);
     }
 
@@ -55,7 +54,7 @@ class Comment extends Model
 
     public function scopeVisible($query)
     {
-        return $query->where('status', 'visible');
+        return $query->where('status', 'published');
     }
 
     public function reports()

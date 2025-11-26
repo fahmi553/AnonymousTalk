@@ -17,9 +17,24 @@
       <div class="card bg-body shadow-sm border-0 rounded-lg">
         <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center">
           <h5 class="fw-bold mb-0 text-body-emphasis">View Reported {{ reportData.type }}</h5>
-          <span class="badge text-bg-primary">{{ reportData.content.category }}</span>
+
+          <div class="d-flex gap-2">
+             <span
+                class="badge"
+                :class="{
+                    'text-bg-success': reportData.content.status === 'active' || reportData.content.status === 'approved',
+                    'text-bg-warning': reportData.content.status === 'hidden' || reportData.content.status === 'moderated',
+                    'text-bg-danger': reportData.content.status === 'flagged',
+                    'text-bg-secondary': !reportData.content.status
+                }"
+             >
+                Status: {{ reportData.content.status || 'Unknown' }}
+             </span>
+
+             <span class="badge text-bg-primary">{{ reportData.content.category }}</span>
+          </div>
         </div>
-        
+
         <div class="card-body p-4">
           <h6 class="text-body-secondary">Context / Title</h6>
           <p class="fs-4 fw-bold text-body-emphasis">{{ reportData.content.title }}</p>
@@ -28,7 +43,7 @@
           <div class="fs-5 bg-body-tertiary p-3 rounded-3" style="white-space: pre-line;">
             {{ reportData.content.body }}
           </div>
-          
+
           <div v-if="reportData.content.author" class="mt-2 text-muted small">
              Author: <strong>{{ reportData.content.author }}</strong>
           </div>
@@ -87,6 +102,7 @@ const reportData = ref(null);
 const loading = ref(true);
 const error = ref('');
 const id = route.params.id;
+
 onMounted(async () => {
   try {
     const res = await axios.get(`/api/admin/report-details/${id}`);
@@ -101,14 +117,14 @@ onMounted(async () => {
 
 const takeAction = async (action) => {
   const type = reportData.value.type;
-  
+
   if (!confirm(`Are you sure you want to ${action} this ${type}?`)) return;
 
   try {
     const endpoint = `/api/moderate/${type.toLowerCase()}/${id}/${action}`;
-    
+
     await axios.post(endpoint);
-    
+
     alert(`${type} successfully ${action}d.`);
     router.push('/admin/dashboard');
 

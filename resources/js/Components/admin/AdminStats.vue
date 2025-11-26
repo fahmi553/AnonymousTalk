@@ -63,7 +63,7 @@ const stats = ref({
 
 const fetchStats = async () => {
   try {
-    const res = await axios.get('/api/admin/dashboard'); 
+    const res = await axios.get('/api/admin/dashboard');
     stats.value = res.data.stats;
   } catch (error) {
     console.error("Failed to load stats:", error);

@@ -18,9 +18,8 @@ class CommentController extends Controller
                 'user',
                 'parentComment.user',
                 'replies' => function($q) {
-                    $q->whereDoesntHave('reports', function ($subQ) {
-                        $subQ->whereNull('reporter_id')->where('status', 'pending');
-                    });
+                    $q->where('status', 'published')
+                      ->orderBy('created_at', 'asc');
                 },
                 'replies.user',
                 'replies.parentComment.user',
@@ -28,14 +27,14 @@ class CommentController extends Controller
             ])
             ->where('post_id', $postId)
             ->whereNull('parent_id')
-            ->whereDoesntHave('reports', function ($q) {
-                $q->whereNull('reporter_id')->where('status', 'pending');
-            })
+            ->where('status', 'published')
             ->oldest()
             ->get();
 
         $comments->loadMissing('replies.parentComment.user', 'replies.replies.parentComment.user');
+
         $payload = $comments->map(fn($c) => $this->formatComment($c));
+
         return response()->json($payload->values());
     }
 
@@ -73,6 +72,7 @@ class CommentController extends Controller
         $sentimentLabel = 'POSITIVE';
         $confidence = 0.0;
         $isToxic = false;
+        $status = 'published';
 
         try {
             $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', [
@@ -83,9 +83,10 @@ class CommentController extends Controller
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
                 $confidence = $aiResult['confidence'];
-                
+
                 if ($sentimentLabel === 'NEGATIVE') {
                     $isToxic = true;
+                    $status = 'moderated';
                 }
             }
         } catch (\Exception $e) {
@@ -97,7 +98,8 @@ class CommentController extends Controller
             'user_id'         => auth()->id(),
             'content'         => $request->content,
             'parent_id'       => $request->parent_id,
-            'sentiment_score' => $confidence, 
+            'sentiment_score' => $confidence,
+            'status'          => $status,
         ]);
 
         CommentSentimentLog::create([
@@ -109,7 +111,7 @@ class CommentController extends Controller
 
         if ($isToxic) {
             \App\Models\Report::create([
-                'reporter_id'     => null, // System
+                'reporter_id'     => null,
                 'reportable_id'   => $comment->comment_id,
                 'reportable_type' => Comment::class,
                 'reason'          => 'High Negative Sentiment',
@@ -124,12 +126,12 @@ class CommentController extends Controller
 
         $comment->load(['user', 'parentComment.user', 'replies']);
         $responsePayload = $this->formatComment($comment);
-        
+
         return response()->json([
             'data' => $responsePayload,
             'is_flagged' => $isToxic,
-            'message' => $isToxic 
-                ? '⚠️ Comment submitted but held for moderation.' 
+            'message' => $isToxic
+                ? '⚠️ Comment submitted but held for moderation.'
                 : 'Comment posted successfully!'
         ]);
     }

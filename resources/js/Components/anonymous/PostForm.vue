@@ -1,6 +1,6 @@
 <template>
   <div class="container py-4" style="max-width: 650px;">
-    
+
     <div
       v-if="showSuccessToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
@@ -88,7 +88,6 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
-
 const title = ref("");
 const content = ref("");
 const category = ref("");
@@ -129,16 +128,18 @@ const submitPost = async () => {
     category.value = "";
     showErrors.value = false;
 
-    if (res.data.status === 'moderated') {
-      warningMessage.value = res.data.message; 
+    if (res.data.status === 'warning') {
+      warningMessage.value = res.data.message;
       showWarningToast.value = true;
+
       setTimeout(() => {
         showWarningToast.value = false;
         router.push("/");
-      }, 4000); 
+      }, 4000);
     } else {
       successMessage.value = res.data.message;
       showSuccessToast.value = true;
+
       setTimeout(() => {
         showSuccessToast.value = false;
         router.push("/");

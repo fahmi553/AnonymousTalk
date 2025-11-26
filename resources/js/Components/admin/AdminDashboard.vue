@@ -1,64 +1,23 @@
 <template>
   <div class="container mt-4">
     <h2 class="mb-4 fw-bold text-body-emphasis">Admin Dashboard</h2>
-    
-    <!-- Stats Row -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-3">
-        <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
-          <div class="fs-3 text-primary bg-primary-subtle p-3 rounded-3 me-3">
-            <i class="fas fa-users"></i>
-          </div>
-          <div>
-            <h6 class="text-body-secondary mb-0">Total Users</h6>
-            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.totalUsers }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
-          <div class="fs-3 text-success bg-success-subtle p-3 rounded-3 me-3">
-            <i class="fas fa-file-alt"></i>
-          </div>
-          <div>
-            <h6 class="text-body-secondary mb-0">Total Posts</h6>
-            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.totalPosts }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
-          <div class="fs-3 text-danger bg-danger-subtle p-3 rounded-3 me-3">
-            <i class="fas fa-user-shield"></i>
-          </div>
-          <div>
-            <h6 class="text-body-secondary mb-0">User Reports</h6>
-            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.pendingUserReports }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card bg-body p-3 shadow-sm border-0 rounded-lg d-flex flex-row align-items-center">
-          <div class="fs-3 text-warning bg-warning-subtle p-3 rounded-3 me-3">
-            <i class="fas fa-robot"></i>
-          </div>
-          <div>
-            <h6 class="text-body-secondary mb-0">Flagged Content</h6>
-            <p class="fs-3 fw-bold mb-0 text-body-emphasis">{{ stats.pendingSentimentReports }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Main Content Area -->
+    <AdminStats />
+
     <div class="card bg-body shadow-sm border-0 rounded-lg">
       <div class="card-header bg-body py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h6 class="fw-bold mb-0 text-body-emphasis me-auto">
           {{ activeTab === 'user' ? 'Pending User Reports' : 'Flagged Content (AI)' }}
         </h6>
-        
+
         <div class="d-flex gap-2">
-          <!-- Filter Dropdown -->
+          <select v-model="filterSeverity" class="form-select form-select-sm bg-body" style="width: auto;">
+            <option value="All">All Severities</option>
+            <option value="High">High Priority</option>
+            <option value="Medium">Medium Priority</option>
+            <option value="Low">Low Priority</option>
+          </select>
+
           <select v-model="filterType" class="form-select form-select-sm bg-body" style="width: auto;">
             <option value="All">All Types</option>
             <option value="Post">Posts Only</option>
@@ -80,24 +39,34 @@
 
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-hover bg-body mb-0">
+          <table class="table table-hover align-middle bg-body mb-0">
             <thead class="table-light">
               <tr>
                 <th scope="col" class="ps-3">Type</th>
-                <th scope="col">Reported By</th>
+                <th scope="col">Severity</th>
+
+                <th scope="col" :style="{ width: activeTab === 'user' ? '25%' : '45%' }">
+                  Reported Content (Snippet)
+                </th>
+
                 <th scope="col">Reason</th>
-                <th scope="col">Status</th>
-                <th scope="col">Actions</th>
+
+                <th scope="col" v-if="activeTab === 'user'">Reported By</th>
+
+                <th scope="col">Time</th>
+                <th scope="col" class="text-end pe-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="filteredReports.length === 0">
-                <td colspan="5" class="text-center text-muted p-4">
-                  <span v-if="!searchTerm && filterType === 'All'">No pending reports found.</span>
+                <td :colspan="activeTab === 'user' ? 7 : 6" class="text-center text-muted p-4">
+                  <span v-if="!searchTerm && filterType === 'All' && filterSeverity === 'All'">
+                    No pending reports found. Good job!
+                  </span>
                   <span v-else>No reports found matching your criteria.</span>
                 </td>
               </tr>
-              
+
               <tr v-for="report in filteredReports" :key="report.id">
                 <td class="ps-3">
                   <span
@@ -109,29 +78,53 @@
                     }"
                   >{{ report.type }}</span>
                 </td>
+
                 <td>
-                  <i v-if="report.reported_by === 'Automated System'" class="fas fa-robot text-muted me-1" title="Automated System"></i>
-                  {{ report.reported_by }}
-                </td>
-                <td>{{ report.reason }}</td>
-                
-                <td>
-                  <span class="badge text-bg-warning text-capitalize">
-                    {{ report.status }}
+                  <span
+                    class="badge rounded-pill"
+                    :class="getSeverityBadge(report.reason)"
+                  >
+                    {{ getSeverityLabel(report.reason) }}
                   </span>
                 </td>
 
-                <td>
-                  <!-- View Content (Post or Comment) -->
+                <td :style="{ maxWidth: activeTab === 'user' ? '250px' : '450px' }">
+                  <div v-if="getContent(report)" class="text-truncate" :title="getContent(report)">
+                    <span class="text-muted fst-italic small">
+                      "{{ truncate(getContent(report), activeTab === 'user' ? 40 : 80) }}"
+                    </span>
+                  </div>
+                  <div v-else class="text-muted small">
+                    <i class="fas fa-ban me-1"></i> Content unavailable
+                  </div>
+                </td>
+
+                <td>{{ report.reason }}</td>
+
+                <td v-if="activeTab === 'user'">
+                  <div>
+                    {{ report.reported_by }}
+                  </div>
+                </td>
+
+                <td class="small text-muted">
+                  {{ timeAgo(report.created_at) }}
+                </td>
+
+                <td class="text-end pe-3">
+
                   <router-link
                     v-if="report.type === 'Post' || report.type === 'Comment'"
                     :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
-                    class="btn btn-primary btn-sm me-2"
+                    class="btn btn-sm me-2 text-white"
+                    :class="{
+                      'btn-primary': report.type === 'Post',
+                      'btn-info': report.type === 'Comment'
+                    }"
                   >
                     View
                   </router-link>
 
-                  <!-- View User -->
                   <router-link
                     v-else-if="report.type === 'User'"
                     :to="{ name: 'ReportUserDetails', params: { id: report.reportable_id } }"
@@ -139,8 +132,8 @@
                   >
                     View
                   </router-link>
-                  
-                  <button class="btn btn-danger btn-sm" @click="deleteReport(report.id)">
+
+                  <button class="btn btn-outline-danger btn-sm" @click="deleteReport(report.id)">
                     Dismiss
                   </button>
                 </td>
@@ -157,7 +150,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import AdminStats from './AdminStats.vue';
+import AdminStats from './AdminStats.vue'
 
 const route = useRoute()
 
@@ -172,30 +165,88 @@ const userReports = ref([])
 const sentimentReports = ref([])
 const searchTerm = ref('')
 const filterType = ref('All')
+const filterSeverity = ref('All')
 const loading = ref(true)
 const activeTab = computed(() => route.query.tab || 'user')
 
 const filteredReports = computed(() => {
   const activeList = activeTab.value === 'user' ? userReports.value : sentimentReports.value;
 
-  return activeList.filter(report => {
+  const result = activeList.filter(report => {
+    const severityLabel = getSeverityLabel(report.reason);
+
     const typeMatch = filterType.value === 'All' || report.type === filterType.value;
-    
+    const severityMatch = filterSeverity.value === 'All' || severityLabel === filterSeverity.value;
+
     const searchMatch = !searchTerm.value ||
            report.reason.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
            report.reported_by.toLowerCase().includes(searchTerm.value.toLowerCase());
 
-    return typeMatch && searchMatch;
+    return typeMatch && severityMatch && searchMatch;
+  });
+
+  return result.sort((a, b) => {
+      const severityWeight = { 'High': 3, 'Medium': 2, 'Low': 1 };
+
+      const severityA = severityWeight[getSeverityLabel(a.reason)] || 0;
+      const severityB = severityWeight[getSeverityLabel(b.reason)] || 0;
+
+      return severityB - severityA;
   });
 });
+
+
+const getContent = (report) => {
+    if (report.content) return report.content;
+    if (report.details) return report.details;
+    if (report.reportable) {
+        return report.reportable.content || report.reportable.body || report.reportable.username || '';
+    }
+    return '';
+};
+
+const truncate = (text, length) => {
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + '...' : text;
+};
+
+const getSeverityLabel = (reason) => {
+    const r = (reason || '').toLowerCase();
+    if (r.includes('hate') || r.includes('threat') || r.includes('suicide') || r.includes('harm') || r.includes('sexual')) return 'High';
+    if (r.includes('spam') || r.includes('ad') || r.includes('bot')) return 'Low';
+    return 'Medium';
+};
+
+const getSeverityBadge = (reason) => {
+    const label = getSeverityLabel(reason);
+    if (label === 'High') return 'bg-danger';
+    if (label === 'Low') return 'bg-secondary';
+    return 'bg-warning text-dark';
+};
+
+const timeAgo = (dateParam) => {
+    if (!dateParam) return '';
+    const date = new Date(dateParam);
+    const now = new Date();
+    const seconds = Math.round((now - date) / 1000);
+    const minutes = Math.round(seconds / 60);
+    const hours = Math.round(minutes / 60);
+    const days = Math.round(hours / 24);
+
+    if (seconds < 60) return 'Just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    if (hours < 24) return `${hours} hrs ago`;
+    if (days === 1) return 'Yesterday';
+    return `${days} days ago`;
+};
 
 const fetchData = async () => {
   loading.value = true;
   try {
-    const res = await axios.get('/api/admin/dashboard'); 
+    const res = await axios.get('/api/admin/dashboard');
     stats.value = res.data.stats;
     userReports.value = res.data.userReports;
-    sentimentReports.value = res.data.sentimentReports; 
+    sentimentReports.value = res.data.sentimentReports;
   } catch (error) {
     console.error("Failed to load dashboard data:", error);
   } finally {
@@ -209,7 +260,7 @@ const deleteReport = async (id) => {
   if (confirm('Are you sure you want to dismiss this report?')) {
     try {
       await axios.delete(`/api/admin/reports/${id}`);
-      fetchData(); 
+      fetchData();
     } catch (error) {
       console.error("Failed to delete report:", error);
       alert("Could not delete the report.");

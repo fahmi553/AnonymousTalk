@@ -4,6 +4,8 @@
       <h2 class="fw-bold text-body-emphasis">View User Trust Scores</h2>
     </div>
 
+    <AdminStats />
+
     <div class="card bg-body shadow-sm border-0 rounded-lg">
       <div class="card-header bg-body py-3">
         <div class="row align-items-center">
@@ -12,14 +14,14 @@
           </div>
           <div class="col-md-6">
             <div class="input-group">
-              <input 
-                type="text" 
-                class="form-control" 
-                placeholder="Search by username..." 
-                v-model="searchQuery" 
+              <input
+                type="text"
+                class="form-control bg-body"
+                placeholder="Search by username..."
+                v-model="searchQuery"
                 @keyup.enter="fetchUsers"
               >
-              <button class="btn btn-primary" type="button" @click="fetchUsers">
+              <button class="btn btn-primary" type="button" @click="fetchUsers()">
                 <i class="fas fa-search"></i>
               </button>
             </div>
@@ -47,10 +49,10 @@
               <tr v-if="users.data.length === 0">
                 <td colspan="5" class="text-center py-4 text-muted">No users found.</td>
               </tr>
-              
+
               <tr v-for="user in users.data" :key="user.user_id">
                 <td class="ps-4 text-muted">#{{ user.user_id }}</td>
-                
+
                 <td>
                   <div class="d-flex align-items-center">
                     <div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
@@ -65,9 +67,9 @@
 
                 <td class="text-center">
                   <div v-if="user.badges && user.badges.length > 0">
-                    <span 
-                      v-for="badge in user.badges" 
-                      :key="badge.id" 
+                    <span
+                      v-for="badge in user.badges"
+                      :key="badge.id"
                       class="badge rounded-pill text-bg-info me-1"
                       :title="badge.description"
                     >
@@ -78,7 +80,7 @@
                 </td>
 
                 <td class="text-center">
-                  <span 
+                  <span
                     class="badge rounded-pill"
                     :class="{
                       'text-bg-success': user.trust_score >= 80,
@@ -93,8 +95,8 @@
                 </td>
 
                 <td class="text-end pe-4">
-                  <router-link 
-                    :to="{ name: 'ReportUserDetails', params: { id: user.user_id } }" 
+                  <router-link
+                    :to="{ name: 'ReportUserDetails', params: { id: user.user_id } }"
                     class="btn btn-primary btn-sm px-3"
                   >
                     View
@@ -105,7 +107,7 @@
           </table>
         </div>
       </div>
-      
+
       <div class="card-footer bg-body py-3 d-flex justify-content-end" v-if="users.meta">
         <nav>
           <ul class="pagination pagination-sm mb-0">

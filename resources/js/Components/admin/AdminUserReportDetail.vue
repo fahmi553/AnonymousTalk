@@ -17,7 +17,7 @@
       <div class="card bg-body shadow-sm border-0 rounded-lg">
         <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center">
           <h5 class="fw-bold mb-0 text-body-emphasis">Reported User Profile</h5>
-          <span 
+          <span
             class="badge"
             :class="{
               'text-bg-success': reportData.user.trust_score >= 80,
@@ -30,11 +30,11 @@
         </div>
         <div class="card-body p-4">
           <div class="d-flex align-items-center mb-4">
-            <img 
-                src="https://i.pravatar.cc/150" 
-                class="rounded-circle border me-4" 
-                width="80" 
-                height="80" 
+            <img
+                src="https://i.pravatar.cc/150"
+                class="rounded-circle border me-4"
+                width="80"
+                height="80"
                 alt="User Avatar"
             >
             <div>
@@ -43,7 +43,7 @@
               <small class="text-muted">Joined: {{ new Date(reportData.user.created_at).toLocaleDateString() }}</small>
             </div>
           </div>
-          
+
           <hr class="my-4">
 
           <div class="d-flex flex-wrap gap-2 justify-content-end">
@@ -62,32 +62,32 @@
             </button>
           </div>
 
-          <div v-if="showAdjustmentForm" class="card mt-3 bg-light border-primary">
+          <div v-if="showAdjustmentForm" class="card mt-3 bg-body-tertiary border-primary">
             <div class="card-body">
-              <h6 class="fw-bold mb-3">Manual Trust Score Adjustment</h6>
+              <h6 class="fw-bold mb-3 text-body-emphasis">Manual Trust Score Adjustment</h6>
               <div class="row g-3">
                 <div class="col-md-3">
-                  <label class="form-label small fw-bold">Score Change (+/-)</label>
-                  <input 
-                    type="number" 
-                    v-model="adjustment.score" 
-                    class="form-control" 
+                  <label class="form-label small fw-bold text-body-secondary">Score Change (+/-)</label>
+                  <input
+                    type="number"
+                    v-model="adjustment.score"
+                    class="form-control bg-body"
                     placeholder="e.g. -10 or 5"
                   >
                 </div>
                 <div class="col-md-7">
-                  <label class="form-label small fw-bold">Reason for Adjustment</label>
-                  <input 
-                    type="text" 
-                    v-model="adjustment.reason" 
-                    class="form-control" 
+                  <label class="form-label small fw-bold text-body-secondary">Reason for Adjustment</label>
+                  <input
+                    type="text"
+                    v-model="adjustment.reason"
+                    class="form-control bg-body"
                     placeholder="e.g. False accusation correction, good behavior..."
                   >
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                  <button 
-                    class="btn btn-primary w-100" 
-                    @click="submitAdjustment" 
+                  <button
+                    class="btn btn-primary w-100"
+                    @click="submitAdjustment"
                     :disabled="processing"
                   >
                     <span v-if="processing" class="spinner-border spinner-border-sm me-1"></span>
@@ -147,6 +147,7 @@ const adjustment = ref({
   score: 0,
   reason: ''
 });
+
 onMounted(async () => {
   try {
     const res = await axios.get(`/api/admin/user-report-details/${userId}`);
@@ -158,6 +159,7 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
 const submitAdjustment = async () => {
   if (adjustment.value.score === 0 || !adjustment.value.reason) {
     alert("Please provide a valid score change (not 0) and a reason.");
@@ -173,7 +175,7 @@ const submitAdjustment = async () => {
     if (reportData.value && reportData.value.user) {
         reportData.value.user.trust_score = res.data.new_score;
     }
-    
+
     alert("Trust score updated successfully.");
     showAdjustmentForm.value = false;
     adjustment.value = { score: 0, reason: '' };
@@ -185,12 +187,13 @@ const submitAdjustment = async () => {
     processing.value = false;
   }
 };
+
 const takeAction = async (action) => {
   if (!confirm(`Are you sure you want to ${action} this user?`)) return;
 
   try {
     await axios.post(`/api/moderate/user/${userId}/${action}`);
-    
+
     alert(`User successfully ${action}ed.`);
     router.push('/admin/dashboard');
 

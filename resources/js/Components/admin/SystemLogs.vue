@@ -2,10 +2,12 @@
   <div class="container mt-4">
     <h2 class="fw-bold text-body-emphasis mb-4">System Activity Logs</h2>
 
+    <AdminStats />
+
     <div class="card bg-body shadow-sm border-0 rounded-lg">
       <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold"><i class="fas fa-history me-2"></i> Audit Trail</h6>
-        <button class="btn btn-sm btn-outline-secondary" @click="fetchLogs">
+        <button class="btn btn-sm btn-outline-secondary" @click="fetchLogs()">
           <i class="fas fa-sync-alt"></i> Refresh
         </button>
       </div>
@@ -44,7 +46,7 @@
                 </td>
 
                 <td>
-                  <span 
+                  <span
                     class="badge"
                     :class="{
                       'text-bg-success': log.action_type === 'reward' || log.action_type === 'post_approved',
@@ -62,7 +64,7 @@
                 </td>
 
                 <td class="text-end pe-4">
-                  <span 
+                  <span
                     class="fw-bold"
                     :class="{
                       'text-success': log.score_change > 0,

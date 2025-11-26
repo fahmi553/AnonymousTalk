@@ -27,7 +27,7 @@ class AdminController extends Controller
             'pendingSentimentReports' => $pendingSentimentReports,
         ];
 
-        $userReports = Report::with('reporter:user_id,username')
+        $userReports = Report::with(['reporter:user_id,username', 'reportable'])
             ->where('status', 'pending')
             ->whereNotNull('reporter_id')
             ->latest()
@@ -37,6 +37,7 @@ class AdminController extends Controller
 
         $sentimentReports = Report::where('status', 'pending')
             ->whereNull('reporter_id')
+            ->with('reportable')
             ->latest()
             ->take(50)
             ->get()
@@ -53,6 +54,7 @@ class AdminController extends Controller
     {
         $reports = Report::where('status', 'pending')
             ->whereNull('reporter_id')
+            ->with('reportable')
             ->latest()
             ->get()
             ->map(fn($report) => $this->formatReport($report));
@@ -63,18 +65,29 @@ class AdminController extends Controller
     private function formatReport($report)
     {
         $type = 'Unknown';
+        $contentSnippet = '';
         $postIdForComment = null;
 
         if ($report->reportable_type === Post::class || $report->reportable_type === 'App\\Models\\Post') {
             $type = 'Post';
+            if ($report->reportable) {
+                $contentSnippet = $report->reportable->title . ': ' . $report->reportable->content;
+            }
         } elseif ($report->reportable_type === Comment::class || $report->reportable_type === 'App\\Models\\Comment') {
             $type = 'Comment';
-            $comment = Comment::find($report->reportable_id);
-            if ($comment) {
-                $postIdForComment = $comment->post_id;
+            if ($report->reportable) {
+                $contentSnippet = $report->reportable->content;
+                $postIdForComment = $report->reportable->post_id;
             }
         } elseif ($report->reportable_type === User::class || $report->reportable_type === 'App\\Models\\User') {
             $type = 'User';
+            if ($report->reportable) {
+                $contentSnippet = "User Profile: " . $report->reportable->username;
+            }
+        }
+
+        if (!$report->reportable) {
+            $contentSnippet = "Content deleted or unavailable.";
         }
 
         return [
@@ -82,8 +95,11 @@ class AdminController extends Controller
             'type' => $type,
             'reported_by' => $report->reporter ? $report->reporter->username : 'Automated System',
             'reason' => $report->reason,
+            'details' => $report->details,
+            'content' => $contentSnippet,
             'reportable_id' => $report->reportable_id,
             'reportable_type' => $report->reportable_type,
+            'reportable' => $report->reportable,
             'post_id_for_comment' => $postIdForComment,
             'status' => $report->status,
             'created_at' => $report->created_at,
@@ -105,12 +121,13 @@ class AdminController extends Controller
                     'title' => $post->title,
                     'body' => $post->content,
                     'category' => $post->categoryModel->name ?? 'None',
-                    'author' => $post->user->username ?? 'Anonymous'
+                    'author' => $post->user->username ?? 'Anonymous',
+                    'status' => $post->status,
                 ],
                 'reports' => $reports
             ]);
-        } 
-        
+        }
+
         $comment = Comment::with('user', 'post')->find($id);
         if ($comment) {
             $reports = Report::with('reporter:user_id,username')
@@ -124,7 +141,8 @@ class AdminController extends Controller
                     'title' => 'Comment on Post #' . $comment->post_id,
                     'body' => $comment->content,
                     'category' => 'Comment',
-                    'author' => $comment->user->username ?? 'Unknown'
+                    'author' => $comment->user->username ?? 'Unknown',
+                    'status' => $comment->status,
                 ],
                 'reports' => $reports
             ]);
@@ -146,10 +164,10 @@ class AdminController extends Controller
 
     public function getUserReportDetails($userId)
     {
-        $user = User::where('user_id', $userId)->firstOrFail(); 
+        $user = User::where('user_id', $userId)->firstOrFail();
         $reports = Report::where('reportable_type', User::class)
             ->where('reportable_id', $userId)
-            ->with('reporter:user_id,username') 
+            ->with('reporter:user_id,username')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -249,7 +267,7 @@ class AdminController extends Controller
     public function getFlaggedPosts()
     {
         $flaggedPosts = Post::with('user')
-            ->where('status', 'moderated') 
+            ->where('status', 'moderated')
             ->orderBy('created_at', 'desc')
             ->get();
 
