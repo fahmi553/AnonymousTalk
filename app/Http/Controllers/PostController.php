@@ -188,7 +188,8 @@ class PostController extends Controller
             ]);
 
             $post->user->updateTrustScore(\App\Models\User::TRUST_SCORE_POST_PENALTY, 'Toxic Post Flagged');
-        } else {
+        // } else {
+        } elseif ($status === 'published') {
             $post->user->updateTrustScore(\App\Models\User::TRUST_SCORE_POST_REWARD, 'Post Submitted');
         }
 

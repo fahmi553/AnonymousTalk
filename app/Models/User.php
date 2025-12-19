@@ -89,20 +89,43 @@ class User extends Authenticatable
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->evaluateRestrictions();
         $this->checkForBadges();
     }
 
     public function checkForBadges()
     {
-        $eligibleBadges = Badge::where('trust_threshold', '<=', $this->trust_score)->get();
+        $eligibleBadges = Badge::where(
+            'trust_threshold', '<=', $this->trust_score
+        )->orderBy('trust_threshold')->get();
+
         foreach ($eligibleBadges as $badge) {
             if (!$this->badges->contains($badge->badge_id)) {
                 $this->badges()->attach($badge->badge_id, [
                     'awarded_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now()
                 ]);
+
+                $this->badge_id = $badge->badge_id;
+                $this->save();
             }
         }
+    }
+
+    public function evaluateRestrictions()
+    {
+        if ($this->trust_score < 5) {
+            $this->hide_all_comments = true;
+        } else {
+            $this->hide_all_comments = false;
+        }
+
+        if ($this->trust_score < 0) {
+            $this->hide_all_posts = true;
+        } else {
+            $this->hide_all_posts = false;
+        }
+
+        $this->save();
     }
 }

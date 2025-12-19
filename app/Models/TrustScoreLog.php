@@ -18,7 +18,6 @@ class TrustScoreLog extends Model
         'action_type',
         'score_change',
         'reason',
-        'timestamp',
     ];
 
     public function user()
