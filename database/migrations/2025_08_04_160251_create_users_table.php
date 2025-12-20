@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up()
     {
+        Schema::dropIfExists('users');
+
         Schema::create('users', function (Blueprint $table) {
             $table->id('user_id');
             $table->string('username')->unique();
@@ -19,13 +21,15 @@ return new class extends Migration
             $table->integer('trust_score')->default(0);
             $table->integer('ban')->default(0);
             $table->enum('role', ['admin', 'moderator', 'user'])->default('user');
-            // $table->unsignedBigInteger('badge_id')->nullable();
+            $table->unsignedBigInteger('badge_id')->nullable();
+            $table->boolean('can_comment')->default(true);
+            $table->boolean('can_post')->default(true);
+            $table->boolean('hide_all_posts')->default(false);
+            $table->boolean('hide_all_comments')->default(false);
             $table->timestamps();
-
-            // $table->foreign('badge_id')->references('badge_id')->on('badges')->nullOnDelete();
+            $table->foreign('badge_id')->references('badge_id')->on('badges')->nullOnDelete();
         });
     }
-
 
     /**
      * Reverse the migrations.

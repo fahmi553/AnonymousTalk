@@ -12,44 +12,55 @@
     <div class="flex-grow-1">
       <div class="d-flex align-items-center mb-1">
         <a
-          v-if="comment.user && comment.user.user_id"
-          :href="'/profile/' + comment.user.user_id"
-          class="fw-bold me-2 text-decoration-none text-body-emphasis username-link"
+            v-if="comment.user && comment.user.user_id"
+            :href="'/profile/' + comment.user.user_id"
+            class="fw-bold me-2 text-decoration-none text-body-emphasis username-link"
         >
-          {{ comment.user.username }}
+            {{ comment.user.username }}
         </a>
         <span v-else-if="comment.user" class="fw-bold me-2">{{ comment.user.username }}</span>
         <span v-else class="fw-bold me-2">Anonymous</span>
 
-        <i class="fas fa-crown text-warning me-2" title="Gold Member"></i>
+        <template v-if="comment.user && comment.user.badges && comment.user.badges.length">
+            <span
+            v-for="badge in comment.user.badges"
+            :key="badge.badge_id"
+            class="badge bg-secondary text-white me-1"
+            :title="badge.description"
+            style="font-size: 0.65rem;"
+            >
+            {{ badge.badge_name }}
+            </span>
+        </template>
         <small class="text-muted">{{ timeAgo(comment.created_at) }}</small>
 
         <button
-          v-if="authUserId"
-          class="btn btn-link btn-sm p-0 ms-2"
-          @click="showReplyForm = !showReplyForm"
-          type="button"
+            v-if="authUserId"
+            class="btn btn-link btn-sm p-0 ms-2"
+            @click="showReplyForm = !showReplyForm"
+            type="button"
         >
-          Reply
+            Reply
         </button>
 
         <button
-          v-if="authUserId == comment.user?.user_id"
-          class="btn btn-link btn-sm text-danger p-0 ms-2"
-          @click="requestDelete(comment.comment_id)"
-          type="button"
+            v-if="authUserId == comment.user?.user_id"
+            class="btn btn-link btn-sm text-danger p-0 ms-2"
+            @click="requestDelete(comment.comment_id)"
+            type="button"
         >
-          Delete
+            Delete
         </button>
+
         <button
-          v-if="authUserId && comment.user?.user_id != authUserId"
-          class="btn btn-link btn-sm text-danger p-0 ms-2"
-          type="button"
-          @click.prevent="$emit('report-request', comment.comment_id, 'comment')"
+            v-if="authUserId && comment.user?.user_id != authUserId"
+            class="btn btn-link btn-sm text-danger p-0 ms-2"
+            type="button"
+            @click.prevent="$emit('report-request', comment.comment_id, 'comment')"
         >
-          Report
+            Report
         </button>
-      </div>
+       </div>
 
       <p class="mb-1">
         <template v-if="comment.reply_to && comment.reply_to_user_id">

@@ -80,14 +80,14 @@
         </h4>
 
         <div v-if="authUserId">
-          <CommentForm 
-            :post-id="post.post_id" 
-            :auth-user-id="authUserId" 
+          <CommentForm
+            :post-id="post.post_id"
+            :auth-user-id="authUserId"
             :user-initial="authUserIdInitial"
             @success="handleCommentSuccess"
           />
         </div>
-        
+
         <p v-else class="text-muted mt-3 alert alert-secondary">
           Please <a href="/login" class="fw-bold">login</a> to comment on this post.
         </p>
@@ -157,15 +157,39 @@
               </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
             <div class="modal-body">
-              <label class="form-label">Reason for reporting:</label>
-              <textarea
-                v-model="reportReason"
-                class="form-control bg-body"
-                rows="3"
-                placeholder="Describe the issue..."
-              ></textarea>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Reason</label>
+                <select
+                  v-model="reportReasonCategory"
+                  class="form-select bg-body"
+                  :class="{'is-invalid': showReportError && !reportReasonCategory}"
+                >
+                  <option disabled value="">Select a reason...</option>
+                  <option value="Spam">Spam</option>
+                  <option value="Nudity/Sexual">Nudity/Sexual</option>
+                  <option value="Hate Speech">Hate Speech</option>
+                  <option value="Self-Harm">Self-Harm</option>
+                  <option value="Harassment">Harassment</option>
+                  <option value="Misinformation">Misinformation</option>
+                  <option value="Trolling">Trolling</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="invalid-feedback">Please select a reason.</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Additional Details (Optional)</label>
+                <textarea
+                  v-model="reportDetails"
+                  class="form-control bg-body"
+                  rows="3"
+                  placeholder="Provide specific context..."
+                ></textarea>
+              </div>
             </div>
+
             <div class="modal-footer border-0">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-danger" @click="submitReport">Submit Report</button>
@@ -173,7 +197,9 @@
           </div>
         </div>
       </div>
+
     </div>
+
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" :class="toastClass" role="alert" aria-live="assertive" aria-atomic="true" ref="toastEl">
           <div class="d-flex">
@@ -208,36 +234,45 @@ const deletePostModal = ref(null)
 const reportModal = ref(null)
 const reportTargetId = ref(null)
 const reportType = ref('post')
-const reportReason = ref("")
+const reportReasonCategory = ref("")
+const reportDetails = ref("")
+const showReportError = ref(false)
 const toastMessage = ref("")
 const toastClass = ref("bg-success")
 const toastEl = ref(null)
 let toastInstance = null
+
 const categories = ref([])
+
 const openReportModal = (targetId, type = 'comment') => {
   reportTargetId.value = targetId
   reportType.value = type
-  reportReason.value = ""
+  reportReasonCategory.value = ""
+  reportDetails.value = ""
+  showReportError.value = false
   const modal = new Modal(reportModal.value)
   modal.show()
 }
 
 const submitReport = async () => {
-  if (!reportReason.value.trim()) return
+  if (!reportReasonCategory.value) {
+    showReportError.value = true
+    return
+  }
+
   try {
     await axios.get("/sanctum/csrf-cookie")
     await axios.post("/api/report", {
       target_id: reportTargetId.value,
       type: reportType.value,
-      reason: reportReason.value.trim(),
+      reason: reportReasonCategory.value,
+      details: reportDetails.value.trim(),
     })
     showToast("Report submitted successfully")
     Modal.getInstance(reportModal.value).hide()
   } catch (err) {
     console.error("Failed to submit report:", err)
     showToast("Failed to submit report", "error")
-  } finally {
-    reportReason.value = ""
   }
 }
 
@@ -268,7 +303,7 @@ const fetchCategories = async () => {
 
 const loadPost = async (silent = false) => {
   if (!silent) loading.value = true
-  
+
   try {
     const res = await axios.get(`/api/posts/${postId}`)
     post.value = res.data

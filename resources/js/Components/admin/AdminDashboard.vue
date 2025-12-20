@@ -49,7 +49,8 @@
                   Reported Content (Snippet)
                 </th>
 
-                <th scope="col">Reason</th>
+                <th scope="col" v-if="activeTab === 'user'">Reason</th>
+                <th scope="col" v-else>AI Confidence</th>
 
                 <th scope="col" v-if="activeTab === 'user'">Reported By</th>
 
@@ -99,7 +100,21 @@
                   </div>
                 </td>
 
-                <td>{{ report.reason }}</td>
+                <td v-if="activeTab === 'user'">{{ report.reason }}</td>
+
+                <td v-else>
+                  <div class="d-flex align-items-center" title="Probability that content is toxic">
+                    <div class="progress flex-grow-1 me-2" style="height: 6px; max-width: 60px; background-color: var(--bs-secondary-bg);">
+                      <div
+                        class="progress-bar"
+                        :class="getConfidenceColor(report.details)"
+                        role="progressbar"
+                        :style="{ width: extractConfidence(report.details) + '%' }"
+                      ></div>
+                    </div>
+                    <span class="small fw-bold">{{ extractConfidence(report.details) }}%</span>
+                  </div>
+                </td>
 
                 <td v-if="activeTab === 'user'">
                   <div>
@@ -112,7 +127,6 @@
                 </td>
 
                 <td class="text-end pe-3">
-
                   <router-link
                     v-if="report.type === 'Post' || report.type === 'Comment'"
                     :to="{ name: 'AdminReportDetail', params: { id: report.reportable_id } }"
@@ -133,7 +147,7 @@
                     View
                   </router-link>
 
-                  <button class="btn btn-outline-danger btn-sm" @click="deleteReport(report.id)">
+                  <button class="btn btn-outline-danger btn-sm" @click="openDismissModal(report.id)">
                     Dismiss
                   </button>
                 </td>
@@ -143,13 +157,36 @@
         </div>
       </div>
     </div>
+
+    <div class="modal fade" id="dismissModal" tabindex="-1" aria-hidden="true" ref="dismissModalRef">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body rounded-3 shadow">
+          <div class="modal-header border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="fas fa-trash-alt text-danger me-2"></i>
+              Dismiss Report?
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to dismiss this report? This action cannot be undone.
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" @click="confirmDismiss">Yes, Dismiss</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { Modal } from 'bootstrap'
 import AdminStats from './AdminStats.vue'
 
 const route = useRoute()
@@ -160,14 +197,25 @@ const stats = ref({
   pendingUserReports: 0,
   pendingSentimentReports: 0
 })
-
 const userReports = ref([])
 const sentimentReports = ref([])
-const searchTerm = ref('')
-const filterType = ref('All')
-const filterSeverity = ref('All')
 const loading = ref(true)
+const dismissModalRef = ref(null)
+const dismissTargetId = ref(null)
+let modalInstance = null
 const activeTab = computed(() => route.query.tab || 'user')
+const savedFilters = JSON.parse(localStorage.getItem('adminFilters') || '{}')
+const searchTerm = ref(savedFilters.search || '')
+const filterType = ref(savedFilters.filter || 'All')
+const filterSeverity = ref(savedFilters.severity || 'All')
+watch([searchTerm, filterType, filterSeverity], () => {
+    const settings = {
+        search: searchTerm.value,
+        filter: filterType.value,
+        severity: filterSeverity.value
+    }
+    localStorage.setItem('adminFilters', JSON.stringify(settings))
+})
 
 const filteredReports = computed(() => {
   const activeList = activeTab.value === 'user' ? userReports.value : sentimentReports.value;
@@ -187,14 +235,11 @@ const filteredReports = computed(() => {
 
   return result.sort((a, b) => {
       const severityWeight = { 'High': 3, 'Medium': 2, 'Low': 1 };
-
       const severityA = severityWeight[getSeverityLabel(a.reason)] || 0;
       const severityB = severityWeight[getSeverityLabel(b.reason)] || 0;
-
       return severityB - severityA;
   });
 });
-
 
 const getContent = (report) => {
     if (report.content) return report.content;
@@ -208,6 +253,19 @@ const getContent = (report) => {
 const truncate = (text, length) => {
     if (!text) return '';
     return text.length > length ? text.substring(0, length) + '...' : text;
+};
+
+const extractConfidence = (details) => {
+    if (!details) return 0;
+    const match = details.match(/(\d+(\.\d+)?)%/);
+    return match ? parseFloat(match[1]) : 0;
+};
+
+const getConfidenceColor = (details) => {
+    const score = extractConfidence(details);
+    if (score > 90) return 'bg-danger';
+    if (score > 75) return 'bg-warning';
+    return 'bg-info';
 };
 
 const getSeverityLabel = (reason) => {
@@ -254,17 +312,31 @@ const fetchData = async () => {
   }
 };
 
-onMounted(fetchData);
+onMounted(() => {
+  fetchData();
+  if (dismissModalRef.value) {
+    modalInstance = new Modal(dismissModalRef.value);
+  }
+});
 
-const deleteReport = async (id) => {
-  if (confirm('Are you sure you want to dismiss this report?')) {
-    try {
-      await axios.delete(`/api/admin/reports/${id}`);
-      fetchData();
-    } catch (error) {
-      console.error("Failed to delete report:", error);
-      alert("Could not delete the report.");
-    }
+const openDismissModal = (id) => {
+  dismissTargetId.value = id;
+  if (!modalInstance) {
+     modalInstance = new Modal(dismissModalRef.value);
+  }
+  modalInstance.show();
+};
+
+const confirmDismiss = async () => {
+  if (!dismissTargetId.value) return;
+
+  try {
+    await axios.delete(`/api/admin/reports/${dismissTargetId.value}`);
+    fetchData();
+    if (modalInstance) modalInstance.hide();
+  } catch (error) {
+    console.error("Failed to delete report:", error);
+    alert("Could not delete the report.");
   }
 }
 </script>

@@ -1,6 +1,5 @@
 <template>
   <div class="container" style="max-width: 700px;">
-    <!-- Main Toast -->
     <div
       v-if="showToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
@@ -52,6 +51,20 @@
             <h5 class="mb-0">{{ user.likes_count ?? 0 }}</h5>
             <small class="text-muted">Likes</small>
           </div>
+        </div>
+        <div class="mb-4">
+        <h5 class="fw-bold mb-2">Badges</h5>
+        <div v-if="user.badges && user.badges.length" class="d-flex flex-wrap gap-2">
+            <span
+            v-for="badge in user.badges"
+            :key="badge.badge_id"
+            class="badge bg-primary"
+            :title="badge.description"
+            >
+            {{ badge.badge_name }}
+            </span>
+        </div>
+        <p v-else class="text-muted small">No badges yet.</p>
         </div>
         <div class="mb-3">
           <label class="form-label"><strong>Trust Score:</strong></label>
@@ -160,7 +173,7 @@
             <i class="fas fa-edit me-1"></i> Edit Profile
           </router-link>
           <button v-else-if="authUserId" class="btn btn-danger flex-grow-1" @click="openReportModal(user.user_id, 'user')">
-            🚩 Report User
+            <i class="fas fa-flag me-2"></i> Report User
           </button>
 
         </div>
@@ -178,13 +191,37 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <label class="form-label">Reason for reporting:</label>
-            <textarea
-              v-model="reportReason"
-              class="form-control bg-body"
-              rows="3"
-              placeholder="Describe the issue..."
-            ></textarea>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Reason</label>
+              <select
+                v-model="reportReasonCategory"
+                class="form-select bg-body"
+                :class="{'is-invalid': showReportError && !reportReasonCategory}"
+              >
+                <option disabled value="">Select a reason...</option>
+                <option value="Spam">Spam</option>
+                <option value="Nudity/Sexual">Nudity/Sexual</option>
+                <option value="Hate Speech">Hate Speech</option>
+                <option value="Self-Harm">Self-Harm</option>
+                <option value="Harassment">Harassment</option>
+                <option value="Misinformation">Misinformation</option>
+                <option value="Trolling">Trolling</option>
+                <option value="Other">Other</option>
+              </select>
+              <div class="invalid-feedback">Please select a reason.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Additional Details (Optional)</label>
+              <textarea
+                v-model="reportDetails"
+                class="form-control bg-body"
+                rows="3"
+                placeholder="Provide specific context..."
+              ></textarea>
+            </div>
+
           </div>
           <div class="modal-footer border-0">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -315,13 +352,13 @@ const commentsMeta = ref({ current_page: 1, last_page: 1, total: 0 });
 const loadingPosts = ref(true);
 const loadingComments = ref(true);
 const loadingPostsToggle = ref(false);
-
 const authUserId = window.authUserId || null;
-
 const reportModal = ref(null);
 const reportType = ref('user');
 const reportTargetId = ref(null);
-const reportReason = ref("");
+const reportReasonCategory = ref("");
+const reportDetails = ref("");
+const showReportError = ref(false);
 const reporting = ref(false);
 
 const formatDate = (dateStr) => {
@@ -436,14 +473,16 @@ const toggleHideAll = async () => {
 const openReportModal = (targetId, type) => {
   reportTargetId.value = targetId;
   reportType.value = type;
-  reportReason.value = "";
-  reporting.value = false;
+  reportReasonCategory.value = "";
+  reportDetails.value = "";
+  showReportError.value = false;
   const modal = Modal.getOrCreateInstance(reportModal.value);
   modal.show();
 };
 
 const submitReport = async () => {
-  if (!reportReason.value.trim()) {
+  if (!reportReasonCategory.value) {
+    showReportError.value = true;
     return;
   }
 
@@ -453,7 +492,8 @@ const submitReport = async () => {
     await axios.post("/api/report", {
       target_id: reportTargetId.value,
       type: reportType.value,
-      reason: reportReason.value.trim(),
+      reason: reportReasonCategory.value,
+      details: reportDetails.value.trim(),
     });
 
     const modal = Modal.getInstance(reportModal.value);
@@ -469,7 +509,8 @@ const submitReport = async () => {
     setTimeout(() => (showToast.value = false), 3000);
   } finally {
     reporting.value = false;
-    reportReason.value = "";
+    reportReasonCategory.value = "";
+    reportDetails.value = "";
   }
 };
 

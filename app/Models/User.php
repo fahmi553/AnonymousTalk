@@ -21,14 +21,17 @@ class User extends Authenticatable
         'password',
         'trust_score',
         'role',
-        'badge_id',
         'hide_all_posts',
         'hide_all_comments',
+        'can_post',
+        'can_comment',
     ];
 
     protected $casts = [
         'hide_all_posts' => 'boolean',
         'hide_all_comments' => 'boolean',
+        'can_post' => 'boolean',
+        'can_comment' => 'boolean',
     ];
 
     protected $hidden = ['password'];
@@ -65,67 +68,127 @@ class User extends Authenticatable
             ->withPivot('awarded_at');
     }
 
-    public function currentBadge()
+    public function applyTrustChange(int $change, string $reason, string $actionType = 'system')
     {
-        return $this->belongsTo(Badge::class, 'badge_id');
-    }
+        if ($change === 0) {
+            return;
+        }
 
-    public function likes()
-    {
-        return $this->hasMany(Like::class, 'user_id');
-    }
-
-    public function updateTrustScore($amount, $reason = 'Activity Reward/Penalty')
-    {
-        $this->trust_score = max(0, $this->trust_score + $amount);
+        $this->trust_score = max(0, min(100, $this->trust_score + $change));
         $this->save();
 
         TrustScoreLog::create([
             'user_id' => $this->user_id,
-            'action_type' => $amount >= 0 ? 'reward' : 'penalty',
-            'score_change' => $amount,
+            'action_type' => $actionType,
+            'score_change' => $change,
             'reason' => $reason,
             'timestamp' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
-        $this->evaluateRestrictions();
-        $this->checkForBadges();
+        $this->enforceTrustConsequences();
+        $this->updateBadges();
     }
 
-    public function checkForBadges()
+    public function enforceTrustConsequences()
     {
-        $eligibleBadges = Badge::where(
-            'trust_threshold', '<=', $this->trust_score
-        )->orderBy('trust_threshold')->get();
+        if ($this->trust_score < 10) {
+            $this->update([
+                'can_post' => false,
+                'can_comment' => false,
+            ]);
+        } elseif ($this->trust_score < 30) {
+            $this->update([
+                'can_post' => false,
+                'can_comment' => true,
+            ]);
+        } else {
+            $this->update([
+                'can_post' => true,
+                'can_comment' => true,
+            ]);
+        }
 
-        foreach ($eligibleBadges as $badge) {
-            if (!$this->badges->contains($badge->badge_id)) {
-                $this->badges()->attach($badge->badge_id, [
-                    'awarded_at' => now(),
-                ]);
+        $this->updateRestrictions();
+    }
 
-                $this->badge_id = $badge->badge_id;
-                $this->save();
+    private function updateRestrictions()
+    {
+        $this->hide_all_comments = $this->trust_score < 5;
+        $this->hide_all_posts = false;
+        $this->save();
+    }
+
+    public function updateBadges()
+    {
+        $allBadges = Badge::all();
+        $userBadgeIds = $this->badges()->pluck('user_badges.badge_id')->toArray();
+
+        $trustBadges = $allBadges->whereNotNull('trust_threshold');
+        $behaviorBadges = $allBadges->whereNull('trust_threshold');
+
+        $this->updateTrustBadges($trustBadges);
+        $this->updateBehaviorBadges($behaviorBadges, $userBadgeIds);
+    }
+
+    private function updateTrustBadges($trustBadges)
+    {
+        $eligible = $trustBadges
+            ->where('trust_threshold', '<=', $this->trust_score)
+            ->sortByDesc('trust_threshold')
+            ->first();
+
+        $this->badges()->detach($trustBadges->pluck('badge_id')->toArray());
+
+        if ($eligible) {
+            $this->badges()->attach($eligible->badge_id, [
+                'awarded_at' => now(),
+            ]);
+        }
+    }
+    private function updateBehaviorBadges($behaviorBadges, $userBadgeIds)
+    {
+        $publishedPosts = $this->posts()->where('status', 'published')->count();
+        $publishedComments = $this->comments()->where('status', 'published')->count();
+        $moderatedCount =
+            $this->posts()->where('status', 'moderated')->count() +
+            $this->comments()->where('status', 'moderated')->count();
+        $safeReplies = $this->comments()
+            ->whereNotNull('parent_id')
+            ->where('status', 'published')
+            ->count();
+
+        $conditions = [
+            'Consistent Poster'  => $publishedPosts >= 10,
+            'Helpful Commenter'  => $publishedComments >= 20,
+            'Civil Contributor'  => $moderatedCount === 0,
+            'Respectful Debater' => $safeReplies >= 10,
+            'Listener'           => $publishedPosts > 0 && $publishedComments >= ($publishedPosts * 3),
+            'Under Review'       => $moderatedCount >= 3,
+            'On Probation'       => $this->trust_score < 10,
+        ];
+
+        $attach = [];
+        $detach = [];
+
+        foreach ($behaviorBadges as $badge) {
+            $hasBadge = in_array($badge->badge_id, $userBadgeIds);
+            $conditionMet = $conditions[$badge->badge_name] ?? false;
+
+            if ($conditionMet && !$hasBadge) {
+                $attach[$badge->badge_id] = ['awarded_at' => now()];
+            }
+
+            if (!$conditionMet && $hasBadge) {
+                $detach[] = $badge->badge_id;
             }
         }
-    }
 
-    public function evaluateRestrictions()
-    {
-        if ($this->trust_score < 5) {
-            $this->hide_all_comments = true;
-        } else {
-            $this->hide_all_comments = false;
+        if (!empty($attach)) {
+            $this->badges()->attach($attach);
         }
 
-        if ($this->trust_score < 0) {
-            $this->hide_all_posts = true;
-        } else {
-            $this->hide_all_posts = false;
+        if (!empty($detach)) {
+            $this->badges()->detach($detach);
         }
-
-        $this->save();
     }
 }

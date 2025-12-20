@@ -193,9 +193,11 @@ class AdminController extends Controller
                 break;
 
             case 'warn':
-                if ($user->trust_score > 0) {
-                    $user->decrement('trust_score', 10);
-                }
+                $user->applyTrustChange(
+                    -10,
+                    'Admin warning issued',
+                    'admin_warning'
+                );
                 $message = "User has been warned.";
                 break;
 

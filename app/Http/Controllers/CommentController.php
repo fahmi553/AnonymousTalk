@@ -15,14 +15,14 @@ class CommentController extends Controller
     public function index($postId)
     {
         $comments = Comment::with([
-                'user',
-                'parentComment.user',
+                'user.badges',
+                'parentComment.user.badges',
                 'replies' => function($q) {
                     $q->where('status', 'published')
-                      ->orderBy('created_at', 'asc');
+                    ->orderBy('created_at', 'asc');
                 },
-                'replies.user',
-                'replies.parentComment.user',
+                'replies.user.badges',
+                'replies.parentComment.user.badges',
                 'replies.replies'
             ])
             ->where('post_id', $postId)
@@ -31,7 +31,7 @@ class CommentController extends Controller
             ->oldest()
             ->get();
 
-        $comments->loadMissing('replies.parentComment.user', 'replies.replies.parentComment.user');
+        $comments->loadMissing('replies.parentComment.user.badges', 'replies.replies.parentComment.user.badges');
 
         $payload = $comments->map(fn($c) => $this->formatComment($c));
 
@@ -47,15 +47,22 @@ class CommentController extends Controller
             'user'       => $comment->user ? [
                 'user_id'  => $comment->user->user_id,
                 'username' => $comment->user->username,
+                'badges'   => $comment->user->badges->map(fn($b) => [
+                    'badge_id'       => $b->badge_id,
+                    'badge_name'     => $b->badge_name,
+                    'description'    => $b->description,
+                    'trust_threshold'=> $b->trust_threshold,
+                    'awarded_at'     => $b->pivot->awarded_at ?? null,
+                ])->values()
             ] : null,
-            'parent_id'  => $comment->parent_id,
-            'reply_to_user_id' => $comment->parentComment && $comment->parentComment->user
+            'parent_id'       => $comment->parent_id,
+            'reply_to_user_id'=> $comment->parentComment && $comment->parentComment->user
                 ? $comment->parentComment->user->user_id
                 : null,
-            'reply_to'   => $comment->parentComment && $comment->parentComment->user
+            'reply_to'        => $comment->parentComment && $comment->parentComment->user
                 ? $comment->parentComment->user->username
                 : null,
-            'replies'    => $comment->replies && $comment->replies->count()
+            'replies'         => $comment->replies && $comment->replies->count()
                 ? $comment->replies->map(fn($r) => $this->formatComment($r))->toArray()
                 : [],
         ];
@@ -75,15 +82,11 @@ class CommentController extends Controller
         $status = 'published';
 
         try {
-            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', [
-                'text' => $request->content,
-            ]);
-
+            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', ['text' => $request->content]);
             if ($response->successful()) {
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
                 $confidence = $aiResult['confidence'];
-
                 if ($sentimentLabel === 'NEGATIVE') {
                     $isToxic = true;
                     $status = 'moderated';
@@ -109,6 +112,8 @@ class CommentController extends Controller
             'created_at'      => now(),
         ]);
 
+        $user = $comment->user;
+
         if ($isToxic) {
             \App\Models\Report::create([
                 'reporter_id'     => null,
@@ -119,10 +124,12 @@ class CommentController extends Controller
                 'status'          => 'pending',
             ]);
 
-            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY, 'Toxic Comment Flagged');
+            $user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Toxic comment detected by AI', 'ai_moderation');
         } else {
-            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_REWARD, 'Comment Posted');
+            $user->applyTrustChange(User::TRUST_SCORE_COMMENT_REWARD, 'Comment posted successfully', 'comment_reward');
         }
+
+        $user->updateBadges();
 
         $comment->load(['user', 'parentComment.user', 'replies']);
         $responsePayload = $this->formatComment($comment);
@@ -130,11 +137,10 @@ class CommentController extends Controller
         return response()->json([
             'data' => $responsePayload,
             'is_flagged' => $isToxic,
-            'message' => $isToxic
-                ? '⚠️ Comment submitted but held for moderation.'
-                : 'Comment posted successfully!'
+            'message' => $isToxic ? '⚠️ Comment submitted but held for moderation.' : 'Comment posted successfully!'
         ]);
     }
+
 
     public function destroy($id)
     {
@@ -160,7 +166,8 @@ class CommentController extends Controller
         }
 
         if ($comment->user) {
-            $comment->user->updateTrustScore(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted');
+            $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted');
+            $comment->user->updateBadges();
         }
 
         $comment->delete();
@@ -196,5 +203,28 @@ class CommentController extends Controller
             ->get();
 
         return response()->json($reports);
+    }
+
+    public function updateStatus(Request $request, Comment $comment)
+    {
+        $request->validate([
+            'status' => ['required', Rule::in(['published', 'moderated'])],
+        ]);
+
+        $previousStatus = $comment->status;
+        $comment->status = $request->status;
+        $comment->save();
+
+        if ($previousStatus !== $comment->status && $comment->user) {
+            if ($comment->status === 'moderated') {
+                $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Flagged / Moderated', 'ai_moderation');
+            } elseif ($previousStatus === 'moderated' && $comment->status === 'published') {
+                $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_REWARD, 'Comment Restored to Published', 'comment_reward');
+            }
+
+            $comment->user->updateBadges();
+        }
+
+        return response()->json(['message' => "Comment status updated to {$comment->status}."]);
     }
 }
