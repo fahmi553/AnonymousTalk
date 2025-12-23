@@ -73,4 +73,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/logs', [AdminController::class, 'getSystemLogs']);
     Route::post('/admin/user/{id}/adjust-score', [AdminController::class, 'adjustTrustScore']);
     Route::get('/admin/flagged-posts', [AdminController::class, 'getFlaggedPosts']);
+    Route::post('/moderate/{type}/{id}/{action}', [ModerationController::class, 'moderateContent']);
 });

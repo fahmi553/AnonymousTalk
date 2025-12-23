@@ -11,154 +11,180 @@ use Illuminate\Support\Arr;
 
 class ReportSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // 1. Get Data Providers
-        // UPDATED: Filter using the 'role' column from your table schema
-        $regularUsers = User::where('role', 'user')->get();
-        
+        $reporters = User::where('role', 'user')->get();
+
         $posts = Post::all();
         $comments = Comment::all();
-        $allUsers = User::all(); // Targets can be anyone (even admins can be reported!)
+        $allUsers = User::all();
 
-        // Safety check to prevent errors if database is empty
-        if ($regularUsers->isEmpty() || $posts->isEmpty() || $comments->isEmpty()) {
-            $this->command->warn('Skipping Report Seeder: Need at least 1 regular user (role="user"), posts, and comments.');
+        if ($reporters->isEmpty() || $posts->isEmpty() || $comments->isEmpty()) {
+            $this->command->warn('Skipping ReportSeeder: Insufficient data (users, posts, or comments missing).');
             return;
         }
 
-        $this->command->info('Seeding realistic reports...');
+        $this->command->info('Seeding realistic, context-aware reports...');
 
-        // ==========================================
-        // DATA SETS FOR REALISM
-        // ==========================================
-
-        $postReasons = [
-            'Spam' => ['Posted a link to a crypto scam site.', 'Repeatedly posting the same advertisement.', 'Bot behavior detected.'],
-            'Hate Speech' => ['Used racial slurs in the title.', 'Promoting violence against a specific group.', 'Offensive symbols in the post image.'],
-            'Misinformation' => ['Sharing fake news regarding health.', 'Conspiracy theories without basis.', 'Misleading political claims.'],
-            'Nudity/Sexual' => ['Contains sexually explicit content.', 'Inappropriate image for a general audience.'],
-            'Self-Harm' => ['User is threatening to hurt themselves.', 'Encouraging eating disorders.'],
+        $postScenarios = [
+            'Spam' => [
+                "User is flooding the 'Advice' category with links to a crypto scam site.",
+                "This is clearly a bot. Look at the posting timestamp (5 posts in 1 minute).",
+                "Advertisements are not allowed here. Please remove.",
+                "Link redirects to a suspicious login page (phishing attempt).",
+            ],
+            'Hate Speech' => [
+                "The title contains a slur targeting a specific ethnic group.",
+                "This post is promoting violence and violates the community safety guidelines.",
+                "User is using coded language/dogwhistles to bypass the filter.",
+                "Extremely offensive imagery in the post body.",
+            ],
+            'Misinformation' => [
+                "OP is spreading debunked conspiracy theories about the recent election.",
+                "This health advice is dangerous and lacks scientific evidence.",
+                "The quote attributed to the politician in this post is fake.",
+            ],
+            'Nudity/Sexual' => [
+                "Image attached is NSFW and not tagged appropriately.",
+                "Explicit sexual content in a general discussion thread.",
+            ],
+            'Self-Harm' => [
+                "User is expressing suicidal ideation. Please intervene.",
+                "Post encourages eating disorders/anorexia.",
+            ]
         ];
 
-        $commentReasons = [
-            'Harassment' => ['Bullying the OP.', 'Personal attacks and name-calling.', 'Stalking behavior across multiple posts.'],
-            'Spam' => ['Just commented "Follow me" on every post.', 'Link to a phishing site.'],
-            'Trolling' => ['Deliberately trying to start an argument.', 'Off-topic ranting.'],
+        $commentScenarios = [
+            'Harassment' => [
+                "This user has replied to my last 3 comments calling me names.",
+                "Doxing threat: They posted my real name in the thread.",
+                "Persistent bullying. I've blocked them but they keep commenting.",
+                "Violates the 'Be Respectful' policy. Personal attack.",
+            ],
+            'Trolling' => [
+                "User is derailing the conversation with off-topic ranting.",
+                "Deliberately trying to incite an argument in a support thread.",
+                "Bumping old threads just to cause confusion.",
+            ],
+            'Spam' => [
+                "Copy-pasting the same 'Follow me' message on every top comment.",
+                "Link to a discord server spam.",
+            ]
         ];
 
-        $userReasons = [
-            'Impersonation' => ['Pretending to be a moderator.', 'Using a celebrity photo and name.', 'Impersonating another user.'],
-            'Inappropriate Profile' => ['Profile picture contains nudity.', 'Bio contains hate speech.', 'Username is offensive.'],
+        $userScenarios = [
+            'Impersonation' => [
+                "This account is using the admin logo as their profile picture.",
+                "Pretending to be a moderator and asking for passwords.",
+                "Impersonating a known public figure.",
+            ],
+            'Inappropriate Profile' => [
+                "Profile bio contains hate speech symbols.",
+                "Username contains a racial slur.",
+                "Avatar is an explicit image.",
+            ]
         ];
 
-        // ==========================================
-        // 1. SPECIFIC SCENARIOS
-        // ==========================================
+        $systemLogs = [
+            ['reason' => 'AI_SENTIMENT_FLAG', 'details' => 'Automated Flag: Toxicity Score 0.98 (High Confidence). Detected keywords: [threat, kill].'],
+            ['reason' => 'RATE_LIMIT_EXCEEDED', 'details' => 'System Alert: User posted 15 comments in 60 seconds. Possible spambot.'],
+            ['reason' => 'KEYWORDS_DETECTED', 'details' => 'Auto-Mod: Content matched blocked pattern /crypto|giveaway/i.'],
+            ['reason' => 'EVASION_DETECTED', 'details' => 'System Alert: User attempting to obfuscate banned words (e.g., "b@d w0rd").'],
+        ];
 
-        // Scenario A: The Crypto Bot (Regular user reports a post)
-        $scamPost = $posts->random();
-        Report::create([
-            'reporter_id' => $regularUsers->random()->user_id,
-            'reportable_id' => $scamPost->post_id,
-            'reportable_type' => Post::class,
-            'reason' => 'Spam',
-            'details' => 'This user is promising free Bitcoin if I click the link.',
-            'status' => 'pending',
-        ]);
-        
-        // Scenario B: Automated System Flag (No Reporter)
-        Report::create([
-            'reporter_id' => null, // System generated
-            'reportable_id' => $posts->random()->post_id,
-            'reportable_type' => Post::class,
-            'reason' => 'Automated Sentiment Flag',
-            'details' => 'System detected highly negative sentiment (-0.95) and flagged for review.',
-            'status' => 'pending',
-        ]);
-
-        // Scenario C: User Reporting a Profile
-        // Ensure the target is not the reporter
-        $reporter = $regularUsers->random();
-        $targetUser = $allUsers->where('user_id', '!=', $reporter->user_id)->random();
-
-        Report::create([
-            'reporter_id' => $reporter->user_id,
-            'reportable_id' => $targetUser->user_id,
-            'reportable_type' => User::class,
-            'reason' => 'Inappropriate Profile',
-            'details' => 'Their profile picture is graphic violence.',
-            'status' => 'pending',
-        ]);
-
-        // ==========================================
-        // 2. GENERATE RANDOM VOLUME (Loop)
-        // ==========================================
-        
-        // Generate 15 random Post reports
-        for ($i = 0; $i < 15; $i++) {
-            $category = array_rand($postReasons);
-            $detail = Arr::random($postReasons[$category]);
-            
+        $targetPost = $posts->random();
+        for ($i = 0; $i < 3; $i++) {
             Report::create([
-                'reporter_id' => $regularUsers->random()->user_id,
+                'reporter_id' => $reporters->random()->user_id,
+                'reportable_id' => $targetPost->post_id,
+                'reportable_type' => Post::class,
+                'reason' => 'Spam',
+                'details' => Arr::random($postScenarios['Spam']),
+                'status' => 'pending',
+                'created_at' => now()->subMinutes(rand(1, 60)),
+            ]);
+        }
+
+        $targetComment = $comments->random();
+        Report::create([
+            'reporter_id' => null,
+            'reportable_id' => $targetComment->comment_id,
+            'reportable_type' => Comment::class,
+            'reason' => 'AI_SENTIMENT_FLAG',
+            'details' => 'Automated Flag: Toxicity Score 0.92. Sentiment: Negative.',
+            'status' => 'pending',
+            'created_at' => now()->subHours(2),
+        ]);
+        Report::create([
+            'reporter_id' => $reporters->random()->user_id,
+            'reportable_id' => $targetComment->comment_id,
+            'reportable_type' => Comment::class,
+            'reason' => 'Harassment',
+            'details' => 'They are being extremely aggressive and rude.',
+            'status' => 'pending',
+            'created_at' => now()->subHours(1),
+        ]);
+        for ($i = 0; $i < 20; $i++) {
+            $reasonCategory = array_rand($postScenarios);
+            $detailText = Arr::random($postScenarios[$reasonCategory]);
+
+            Report::create([
+                'reporter_id' => $reporters->random()->user_id,
                 'reportable_id' => $posts->random()->post_id,
                 'reportable_type' => Post::class,
-                'reason' => $category,
-                'details' => $detail,
-                'status' => Arr::random(['pending', 'pending', 'pending', 'reviewed']), // Mostly pending
+                'reason' => $reasonCategory,
+                'details' => $detailText,
+                'status' => Arr::random(['pending', 'pending', 'reviewed', 'resolved']),
+                'created_at' => now()->subDays(rand(0, 7)),
             ]);
         }
 
-        // Generate 10 random Comment reports
-        for ($i = 0; $i < 10; $i++) {
-            $category = array_rand($commentReasons);
-            $detail = Arr::random($commentReasons[$category]);
+        for ($i = 0; $i < 15; $i++) {
+            $reasonCategory = array_rand($commentScenarios);
+            $detailText = Arr::random($commentScenarios[$reasonCategory]);
 
             Report::create([
-                'reporter_id' => $regularUsers->random()->user_id,
+                'reporter_id' => $reporters->random()->user_id,
                 'reportable_id' => $comments->random()->comment_id,
                 'reportable_type' => Comment::class,
-                'reason' => $category,
-                'details' => $detail,
+                'reason' => $reasonCategory,
+                'details' => $detailText,
                 'status' => 'pending',
+                'created_at' => now()->subDays(rand(0, 3)),
             ]);
         }
 
-        // Generate 5 random User reports
         for ($i = 0; $i < 5; $i++) {
-            $category = array_rand($userReasons);
-            $detail = Arr::random($userReasons[$category]);
-            
-            $reporter = $regularUsers->random();
-            // Prevent reporting self
+            $reasonCategory = array_rand($userScenarios);
+            $detailText = Arr::random($userScenarios[$reasonCategory]);
+
+            $reporter = $reporters->random();
             $target = $allUsers->where('user_id', '!=', $reporter->user_id)->random();
 
             Report::create([
                 'reporter_id' => $reporter->user_id,
                 'reportable_id' => $target->user_id,
                 'reportable_type' => User::class,
-                'reason' => $category,
-                'details' => $detail,
+                'reason' => $reasonCategory,
+                'details' => $detailText,
                 'status' => 'pending',
+                'created_at' => now()->subDays(rand(1, 10)),
             ]);
         }
 
-        // Generate 3 System Flags (Automated)
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 5; $i++) {
+            $log = Arr::random($systemLogs);
             Report::create([
                 'reporter_id' => null,
                 'reportable_id' => $posts->random()->post_id,
                 'reportable_type' => Post::class,
-                'reason' => 'System Flag: Keywords',
-                'details' => 'Detected prohibited keywords related to self-harm.',
+                'reason' => $log['reason'],
+                'details' => $log['details'],
                 'status' => 'pending',
+                'created_at' => now()->subHours(rand(1, 12)),
             ]);
         }
 
-        $this->command->info('Reports seeded successfully!');
+        $this->command->info('Legitimate-looking reports seeded successfully!');
     }
 }
