@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Badge;
 use App\Models\TrustScoreLog;
+use Illuminate\Support\Facades\Log;
 
 class User extends Authenticatable
 {
@@ -25,7 +26,10 @@ class User extends Authenticatable
         'hide_all_comments',
         'can_post',
         'can_comment',
+        'avatar',
     ];
+
+    protected $appends = ['avatar_url'];
 
     protected $casts = [
         'hide_all_posts' => 'boolean',
@@ -74,8 +78,19 @@ class User extends Authenticatable
             return;
         }
 
+        $oldScore = $this->trust_score;
+
         $this->trust_score = max(0, min(100, $this->trust_score + $change));
         $this->save();
+
+        Log::info('Trust score updated', [
+            'user_id' => $this->user_id,
+            'old_score' => $oldScore,
+            'change' => $change,
+            'new_score' => $this->trust_score,
+            'reason' => $reason,
+            'action_type' => $actionType,
+        ]);
 
         TrustScoreLog::create([
             'user_id' => $this->user_id,
@@ -120,11 +135,16 @@ class User extends Authenticatable
 
     public function updateBadges()
     {
+        Log::info('Starting badge recalculation', [
+            'user_id' => $this->user_id,
+            'trust_score' => $this->trust_score,
+        ]);
+
         $allBadges = Badge::all();
         $userBadgeIds = $this->badges()->pluck('user_badges.badge_id')->toArray();
 
-        $trustBadges = $allBadges->whereNotNull('trust_threshold');
-        $behaviorBadges = $allBadges->whereNull('trust_threshold');
+        $trustBadges = $allBadges->where('trust_threshold', '>', 0);
+        $behaviorBadges = $allBadges->where('trust_threshold', 0);
 
         $this->updateTrustBadges($trustBadges);
         $this->updateBehaviorBadges($behaviorBadges, $userBadgeIds);
@@ -132,19 +152,33 @@ class User extends Authenticatable
 
     private function updateTrustBadges($trustBadges)
     {
+        Log::info('Evaluating trust badges', [
+            'user_id' => $this->user_id,
+            'trust_score' => $this->trust_score,
+        ]);
+
+        $trustBadgeIds = $trustBadges->pluck('badge_id')->toArray();
+
+        $this->badges()->detach($trustBadgeIds);
+
         $eligible = $trustBadges
             ->where('trust_threshold', '<=', $this->trust_score)
             ->sortByDesc('trust_threshold')
             ->first();
 
-        $this->badges()->detach($trustBadges->pluck('badge_id')->toArray());
-
         if ($eligible) {
             $this->badges()->attach($eligible->badge_id, [
                 'awarded_at' => now(),
             ]);
+
+            Log::info('Assigned trust badge', [
+                'user_id' => $this->user_id,
+                'badge' => $eligible->badge_name,
+                'threshold' => $eligible->trust_threshold,
+            ]);
         }
     }
+
     private function updateBehaviorBadges($behaviorBadges, $userBadgeIds)
     {
         $publishedPosts = $this->posts()->where('status', 'published')->count();
@@ -152,6 +186,7 @@ class User extends Authenticatable
         $moderatedCount =
             $this->posts()->where('status', 'moderated')->count() +
             $this->comments()->where('status', 'moderated')->count();
+
         $safeReplies = $this->comments()
             ->whereNotNull('parent_id')
             ->where('status', 'published')
@@ -167,28 +202,36 @@ class User extends Authenticatable
             'On Probation'       => $this->trust_score < 10,
         ];
 
-        $attach = [];
-        $detach = [];
-
         foreach ($behaviorBadges as $badge) {
             $hasBadge = in_array($badge->badge_id, $userBadgeIds);
             $conditionMet = $conditions[$badge->badge_name] ?? false;
 
             if ($conditionMet && !$hasBadge) {
-                $attach[$badge->badge_id] = ['awarded_at' => now()];
+                $this->badges()->attach($badge->badge_id, [
+                    'awarded_at' => now(),
+                ]);
+
+                Log::info('Behavior badge attached', [
+                    'user_id' => $this->user_id,
+                    'badge' => $badge->badge_name,
+                ]);
             }
 
             if (!$conditionMet && $hasBadge) {
-                $detach[] = $badge->badge_id;
+                $this->badges()->detach($badge->badge_id);
+
+                Log::info('Behavior badge detached', [
+                    'user_id' => $this->user_id,
+                    'badge' => $badge->badge_name,
+                ]);
             }
         }
-
-        if (!empty($attach)) {
-            $this->badges()->attach($attach);
-        }
-
-        if (!empty($detach)) {
-            $this->badges()->detach($detach);
-        }
     }
+
+    public function getAvatarUrlAttribute()
+    {
+        $avatar = $this->avatar ?? 'default.png';
+        return asset("images/avatars/{$avatar}");
+    }
+
 }

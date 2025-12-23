@@ -1,12 +1,12 @@
 <template>
   <div class="d-flex mb-3">
-    <div class="me-2">
-      <div
-        class="rounded-circle bg-body-secondary text-body-emphasis d-flex align-items-center justify-content-center"
-        style="width: 40px; height: 40px; font-weight: bold;"
-      >
-        {{ (comment.user?.username || '?').charAt(0).toUpperCase() }}
-      </div>
+    <div class="me-2 flex-shrink-0">
+    <img
+        :src="comment.user?.avatar ? `/images/avatars/${comment.user.avatar}` : '/images/avatars/default.jpg'"
+        alt="User Avatar"
+        class="rounded-circle border bg-white"
+        style="width: 40px; height: 40px; object-fit: cover;"
+    />
     </div>
 
     <div class="flex-grow-1">

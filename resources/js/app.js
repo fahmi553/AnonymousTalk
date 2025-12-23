@@ -26,6 +26,10 @@ import ReportUserDetails from './Components/admin/AdminUserReportDetail.vue'
 import UserList from './Components/admin/UserList.vue';
 import SystemLogs from './Components/admin/SystemLogs.vue';
 import AppSidebar from './Components/AppSidebar.vue'
+import TermsOfService from './Components/pages/TermsOfService.vue';
+import PrivacyPolicy from './Components/pages/PrivacyPolicy.vue';
+import CommunityGuidelines from './Components/pages/CommunityGuidelines.vue';
+import HelpCenter from './Components/pages/HelpCenter.vue';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -40,6 +44,10 @@ const routes = [
   { path: '/admin/report/user/:id', component: ReportUserDetails, name: 'ReportUserDetails'},
   { path: '/admin/users', component: UserList, name: 'AdminUserList', eta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/logs', component: SystemLogs, name: 'SystemLogs', meta: { requiresAuth: true, requiresAdmin: true }},
+  { path: '/terms', component: TermsOfService, name: 'Terms' },
+  { path: '/privacy', component: PrivacyPolicy, name: 'Privacy' },
+  { path: '/community-guidelines', component: CommunityGuidelines, name: 'CommunityGuidelines' },
+  { path: '/help', component: HelpCenter, name: 'HelpCenter' },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 

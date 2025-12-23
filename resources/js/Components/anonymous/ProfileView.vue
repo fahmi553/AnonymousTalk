@@ -1,11 +1,9 @@
 <template>
-  <div class="container" style="max-width: 700px;">
+  <div class="container py-4" style="max-width: 800px;">
+
     <div
       v-if="showToast"
       class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show"
-      role="alert"
-      aria-live="assertive"
-      aria-atomic="true"
       style="z-index: 1055; min-width: 250px;"
     >
       <div class="d-flex">
@@ -14,174 +12,250 @@
       </div>
     </div>
 
-    <div v-if="loading" class="text-center mt-5">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="mt-3 text-muted">Loading profile...</p>
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+      <p class="mt-3 text-muted fw-medium">Loading profile...</p>
     </div>
-    <div v-else-if="error" class="text-danger mt-5">{{ error }}</div>
 
-    <div v-else-if="user" class="card bg-body shadow-lg border-0 overflow-hidden">
-      <div class="p-4 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="d-flex align-items-center">
-          <img
-            src="https://i.pravatar.cc/100"
-            alt="Avatar"
-            class="rounded-circle border border-3 border-white me-3"
-            width="80"
-            height="80"
-          />
-          <div>
-            <h3 class="mb-0">{{ user.username || "Anonymous" }}</h3>
-            <small class="text-light">{{ isSelf ? "This is you" : "Anonymous User" }}</small>
+    <div v-else-if="error" class="alert alert-danger shadow-sm mt-4">
+      <i class="fas fa-exclamation-circle me-2"></i> {{ error }}
+    </div>
+
+    <div v-else-if="user" class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4 bg-body">
+
+      <div class="profile-banner" style="height: 200px;"></div>
+
+      <div class="card-body px-4 px-md-5 pb-4 position-relative">
+
+        <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end mb-4" style="margin-top: -90px;">
+
+          <div class="position-relative me-md-4 mb-3 mb-md-0">
+            <img
+              :src="user.avatar ? `/images/avatars/${user.avatar}` : '/images/avatars/default.jpg'"
+              alt="Avatar"
+              class="rounded-circle border border-4 border-body shadow bg-body"
+              width="150"
+              height="150"
+              style="object-fit: cover;"
+            />
           </div>
+
+          <div class="text-center text-md-start mb-2 flex-grow-1">
+            <h1 class="fw-bolder mb-1 text-body-emphasis display-5">{{ user.username || "Anonymous" }}</h1>
+
+            <div class="text-muted mb-2 d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+              <span v-if="isSelf" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">That's You</span>
+              <span>Joined {{ formatDate(user.created_at) }}</span>
+            </div>
+
+            <div class="badge bg-body-secondary text-body-emphasis border text-uppercase" style="letter-spacing: 0.5px;">
+              {{ user.role || "User" }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3 mt-md-0">
+            <router-link v-if="isSelf" to="/profile/edit" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+              <i class="fas fa-edit me-2"></i>Edit Profile
+            </router-link>
+            <button v-else-if="authUserId" class="btn btn-outline-danger rounded-pill px-4" @click="openReportModal(user.user_id, 'user')">
+              <i class="fas fa-flag me-2"></i>Report
+            </button>
+          </div>
+        </div>
+
+        <div class="row text-center border-top border-bottom py-4 mb-4 g-0">
+          <div class="col-4 border-end border-secondary-subtle">
+            <div class="h3 fw-bolder mb-0 text-body-emphasis">{{ postsMeta.total ?? 0 }}</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Posts</div>
+          </div>
+          <div class="col-4 border-end border-secondary-subtle">
+            <div class="h3 fw-bolder mb-0 text-body-emphasis">{{ commentsMeta.total ?? 0 }}</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Comments</div>
+          </div>
+          <div class="col-4">
+            <div class="h3 fw-bolder mb-0 text-body-emphasis">{{ user.likes_count ?? 0 }}</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Likes</div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-end mb-2">
+            <label class="fw-bold small text-uppercase text-muted">Trust Score</label>
+            <span class="fw-bold fs-5 text-primary">{{ user.trust_score || 0 }}%</span>
+          </div>
+          <div class="progress bg-body-secondary" style="height: 12px; border-radius: 10px;">
+            <div
+              class="progress-bar bg-gradient"
+              role="progressbar"
+              :class="user.trust_score > 80 ? 'bg-success' : (user.trust_score > 50 ? 'bg-info' : 'bg-warning')"
+              :style="{ width: (user.trust_score || 0) + '%' }"
+            ></div>
+          </div>
+        </div>
+
+        <div class="bg-body-tertiary rounded-4 p-4 mb-3 border border-secondary-subtle">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+             <h6 class="fw-bold mb-0 text-body-emphasis"><i class="fas fa-trophy text-warning me-2"></i>Achievements</h6>
+             <span class="badge bg-body text-body border shadow-sm">{{ unlockedBadges.length }} Unlocked</span>
+          </div>
+
+          <div v-if="unlockedBadges.length > 0" class="row row-cols-4 row-cols-md-5 g-3 justify-content-center">
+            <div v-for="badge in unlockedBadges" :key="badge.badge_id" class="col">
+              <div
+                class="badge-item d-flex flex-column align-items-center text-center p-2 rounded-3"
+                data-bs-toggle="tooltip"
+                :title="badge.description"
+              >
+                <img v-if="badge.icon_url" :src="badge.icon_url" :alt="badge.badge_name" class="img-fluid mb-2 drop-shadow" width="48" />
+                <div class="small fw-bold lh-1 text-body-secondary" style="font-size: 0.7rem;">{{ badge.badge_name }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center text-muted small py-2">
+            No badges earned yet. Keep participating!
+          </div>
+
+          <div v-if="lockedBadges.length > 0" class="text-center mt-3 pt-3 border-top border-secondary-subtle">
+            <button
+                class="btn btn-sm btn-link text-decoration-none text-muted"
+                @click="showLockedBadges = !showLockedBadges"
+            >
+                {{ showLockedBadges ? 'Hide' : 'Show' }} Locked Badges
+                <i class="fas ms-1" :class="showLockedBadges ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+          </div>
+
+          <div v-if="showLockedBadges && lockedBadges.length > 0" class="row row-cols-4 row-cols-md-5 g-3 justify-content-center mt-1">
+            <div v-for="badge in lockedBadges" :key="badge.badge_id" class="col">
+                <div
+                class="badge-item d-flex flex-column align-items-center text-center p-2 rounded-3 opacity-50"
+                data-bs-toggle="tooltip"
+                :title="'Locked: ' + badge.description"
+                >
+                <div class="position-relative mb-2">
+                    <img v-if="badge.icon_url" :src="badge.icon_url" class="img-fluid grayscale" width="40" />
+                    <i class="fas fa-lock position-absolute top-50 start-50 translate-middle text-body"></i>
+                </div>
+                <div class="small text-muted lh-1" style="font-size: 0.7rem;">{{ badge.badge_name }}</div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div v-if="user">
+      <div v-if="isSelf" class="d-flex justify-content-end mb-3">
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          @click="toggleHideAll('posts')"
+          :disabled="loadingPostsToggle"
+        >
+          <i class="fas" :class="user.hide_all_posts ? 'fa-eye' : 'fa-eye-slash'"></i>
+          {{ user.hide_all_posts ? "Show All Posts Publicly" : "Hide All Posts Publicly" }}
+        </button>
+      </div>
+
+      <ul class="nav nav-pills nav-fill mb-4 bg-body shadow-sm rounded-pill p-1 border border-secondary-subtle">
+        <li class="nav-item">
+          <button class="nav-link rounded-pill fw-bold" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">
+            <i class="fas fa-pen-nib me-2"></i>Posts
+          </button>
+        </li>
+        <li class="nav-item" v-if="isSelf">
+          <button class="nav-link rounded-pill fw-bold" :class="{ active: activeTab === 'comments' }" @click="activeTab = 'comments'">
+            <i class="fas fa-comment-dots me-2"></i>Comments
+          </button>
+        </li>
+      </ul>
+
+      <div v-if="activeTab === 'posts'" class="fade-in">
+
+        <div v-if="isSelf" class="position-relative mb-4">
+            <input
+              type="text"
+              class="form-control form-control-lg ps-5 rounded-pill bg-body text-body border-secondary-subtle"
+              placeholder="Search your posts..."
+              v-model="postSearchTerm"
+              @input="debouncedSearchPosts"
+            />
+            <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+        </div>
+
+        <div v-if="loadingPosts" class="text-center py-5 text-muted">Loading posts...</div>
+        <div v-else-if="posts.length === 0" class="text-center py-5 card border-0 shadow-sm rounded-4 bg-body">
+            <div class="card-body">
+                <i class="fas fa-folder-open fa-3x text-body-tertiary mb-3"></i>
+                <p class="mb-0 text-muted">No posts found.</p>
+            </div>
+        </div>
+
+        <div v-else class="d-flex flex-column gap-3">
+          <div
+            v-for="post in posts"
+            :key="post.post_id"
+            class="card border border-secondary-subtle shadow-sm rounded-4 overflow-hidden card-hover bg-body"
+            :class="{ 'border-warning border-2': post.hidden_in_profile }"
+          >
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <router-link :to="`/posts/${post.post_id}`" class="h5 fw-bold text-decoration-none text-body-emphasis mb-2 d-block stretched-link">
+                        {{ post.title || "Untitled Post" }}
+                    </router-link>
+
+                    <button
+                        v-if="isSelf"
+                        class="btn btn-sm rounded-pill position-relative z-2 ms-2"
+                        :class="post.hidden_in_profile ? 'btn-warning' : 'btn-light border'"
+                        @click.stop="togglePostVisibility(post.post_id)"
+                        data-bs-toggle="tooltip"
+                        title="Toggle visibility on public profile"
+                    >
+                        <i :class="post.hidden_in_profile ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                </div>
+
+                <div class="d-flex gap-3 text-muted small mt-2">
+                    <span><i class="far fa-comment me-1"></i>{{ post.comments_count ?? 0 }}</span>
+                    <span><i class="far fa-heart me-1"></i>{{ post.likes_count ?? 0 }}</span>
+                    <span><i class="far fa-calendar me-1"></i>{{ formatDate(post.created_at) }}</span>
+                </div>
+            </div>
+          </div>
+          <PaginationControls v-if="postsMeta.last_page > 1" :meta="postsMeta" @page-change="fetchPosts" class="mt-3" />
         </div>
       </div>
 
-      <div class="card-body">
-        <div class="d-flex justify-content-around text-center mb-4">
-          <div>
-            <h5 class="mb-0">{{ postsMeta.total ?? 0 }}</h5>
-            <small class="text-muted">Posts</small>
-          </div>
-          <div>
-            <h5 class="mb-0">{{ commentsMeta.total ?? 0 }}</h5>
-            <small class="text-muted">Comments</small>
-          </div>
-          <div>
-            <h5 class="mb-0">{{ user.likes_count ?? 0 }}</h5>
-            <small class="text-muted">Likes</small>
-          </div>
+      <div v-else-if="activeTab === 'comments' && isSelf" class="fade-in">
+        <div class="alert alert-info border-0 rounded-4 d-flex align-items-center mb-4">
+            <i class="fas fa-info-circle fa-lg me-3"></i>
+            <div>Only you can see your comment history.</div>
         </div>
-        <div class="mb-4">
-        <h5 class="fw-bold mb-2">Badges</h5>
-        <div v-if="user.badges && user.badges.length" class="d-flex flex-wrap gap-2">
-            <span
-            v-for="badge in user.badges"
-            :key="badge.badge_id"
-            class="badge bg-primary"
-            :title="badge.description"
-            >
-            {{ badge.badge_name }}
-            </span>
-        </div>
-        <p v-else class="text-muted small">No badges yet.</p>
-        </div>
-        <div class="mb-3">
-          <label class="form-label"><strong>Trust Score:</strong></label>
-          <div class="progress" style="height: 20px;">
-            <div
-              class="progress-bar"
-              role="progressbar"
-              :style="{ width: (user.trust_score || 0) + '%' }"
-              :aria-valuenow="user.trust_score || 0"
-              aria-valuemin="0"
-              aria-valuemax="100"
-            >
-              {{ user.trust_score || 0 }}%
-            </div>
-          </div>
-        </div>
-        <p><i class="fas fa-user-shield me-2"></i><strong>Role:</strong> {{ user.role || "User" }}</p>
-        <p>
-          <i class="fas fa-calendar-alt me-2"></i>
-          <strong>Joined:</strong>
-          {{ formatDate(user.created_at) }}
-        </p>
-        <div v-if="isSelf" class="mt-3 d-flex gap-2">
-          <button
-            class="btn btn-secondary flex-grow-1"
-            @click="toggleHideAll('posts')"
-            :disabled="loadingPostsToggle"
-          >
-            <i class="fas" :class="user.hide_all_posts ? 'fa-eye' : 'fa-eye-slash'"></i>
-            {{ user.hide_all_posts ? "Show All Posts" : "Hide All Posts" }}
-          </button>
-        </div>
-        <ul v-if="isSelf" class="nav nav-pills mt-4" id="profileTabs">
-          <li class="nav-item">
-            <button class="nav-link" :class="{ active: activeTab === 'posts' }" @click="activeTab = 'posts'">Posts</button>
-          </li>
-          <li class="nav-item">
-            <button class="nav-link" :class="{ active: activeTab === 'comments' }" @click="activeTab = 'comments'">Comments</button>
-          </li>
-        </ul>
-        <div class="mt-3" v-if="activeTab === 'posts'">
-          <h4 v-if="!isSelf" class="fw-bold mb-3">Posts</h4>
-          <div v-if="isSelf" class="input-group mb-3">
-            <input type="text" class="form-control bg-body" placeholder="Search your posts..." v-model="postSearchTerm" @input="debouncedSearchPosts" />
-            <button class="btn btn-outline-secondary" type="button" @click="fetchPosts(1)">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-          <div v-if="loadingPosts" class="text-muted small text-center py-3">Loading posts...</div>
-          <div v-else-if="posts.length === 0 && postSearchTerm" class="text-muted small text-center py-3">
-            No posts found matching your search.
-          </div>
-          <div v-else-if="posts.length === 0" class="text-muted small text-center py-3">No posts yet.</div>
-          <div v-else>
-            <div
-              v-for="post in posts"
-              :key="post.post_id"
-              class="border-bottom py-2 d-flex justify-content-between align-items-start"
-              :class="{ 'opacity-50': post.hidden_in_profile }"
-            >
-              <div>
-                <router-link :to="`/posts/${post.post_id}`" class="fw-semibold text-decoration-none text-body-emphasis">
-                  {{ post.title || "Untitled Post" }}
-                </router-link>
-                <p class="text-muted small mb-0">{{ post.comments_count ?? 0 }} comments · {{ post.likes_count ?? 0 }} likes</p>
-              </div>
-              <button
-                v-if="isSelf"
-                class="btn btn-sm"
-                :class="post.hidden_in_profile ? 'btn-success' : 'btn-secondary'"
-                @click="togglePostVisibility(post.post_id)"
-              >
-                <i :class="post.hidden_in_profile ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
-                {{ post.hidden_in_profile ? "Unhide" : "Hide" }}
-              </button>
-            </div>
-            <PaginationControls v-if="postsMeta.last_page > 1" :meta="postsMeta" @page-change="fetchPosts" class="mt-3" />
-          </div>
-        </div>
-        <div class="mt-3" v-else-if="activeTab === 'comments' && isSelf">
-          <div class="alert alert-info small text-center rounded-3 mb-3">
-            <i class="fas fa-info-circle me-2"></i>
-            Only you can see your comment history.
-          </div>
-          <div class="input-group mb-3">
-            <input type="text" class="form-control bg-body" placeholder="Search your comments..." v-model="commentSearchTerm" @input="debouncedSearchComments" />
-            <button class="btn btn-outline-secondary" type="button" @click="fetchComments(1)">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-          <div v-if="loadingComments" class="text-muted small text-center py-3">Loading comments...</div>
-          <div v-else-if="comments.length === 0 && commentSearchTerm" class="text-muted small text-center py-3">No comments found matching your search.</div>
-          <div v-else-if="comments.length === 0" class="text-muted small text-center py-3">You haven’t made any comments yet.</div>
-          <div v-else>
-            <div v-for="c in comments" :key="c.comment_id" class="border-bottom py-2">
-              <p class="mb-1">{{ c.content }}</p>
-              <router-link v-if="c.post" :to="`/posts/${c.post_id}`" class="small text-muted">
-                On: {{ c.post.title || "Post" }}
-              </router-link>
+
+        <div v-if="loadingComments" class="text-center py-5">Loading...</div>
+        <div v-else-if="comments.length === 0" class="text-center py-5 text-muted">No comments made yet.</div>
+
+        <div v-else class="d-flex flex-column gap-2">
+            <div v-for="c in comments" :key="c.comment_id" class="card border border-secondary-subtle shadow-sm rounded-3 bg-body">
+                <div class="card-body">
+                    <p class="mb-2 text-body-emphasis">{{ c.content }}</p>
+                    <div class="small text-muted bg-body-tertiary p-2 rounded-2 d-inline-block border border-secondary-subtle">
+                        <i class="fas fa-reply me-1"></i> On:
+                        <router-link v-if="c.post" :to="`/posts/${c.post_id}`" class="fw-bold text-decoration-none text-body-secondary">
+                            {{ c.post.title || "Post" }}
+                        </router-link>
+                    </div>
+                </div>
             </div>
             <PaginationControls v-if="commentsMeta.last_page > 1" :meta="commentsMeta" @page-change="fetchComments" class="mt-3" />
-          </div>
-        </div>
-        <div class="d-flex gap-2 mt-4">
-          <router-link v-if="isSelf" to="/profile/edit" class="btn btn-primary flex-grow-1">
-            <i class="fas fa-edit me-1"></i> Edit Profile
-          </router-link>
-          <button v-else-if="authUserId" class="btn btn-danger flex-grow-1" @click="openReportModal(user.user_id, 'user')">
-            <i class="fas fa-flag me-2"></i> Report User
-          </button>
-
         </div>
       </div>
+
     </div>
 
     <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true" ref="reportModal">
-      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-body rounded-3 shadow">
           <div class="modal-header border-0">
             <h5 class="modal-title fw-bold">
@@ -191,7 +265,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-
             <div class="mb-3">
               <label class="form-label fw-semibold">Reason</label>
               <select
@@ -211,7 +284,6 @@
               </select>
               <div class="invalid-feedback">Please select a reason.</div>
             </div>
-
             <div class="mb-3">
               <label class="form-label fw-semibold">Additional Details (Optional)</label>
               <textarea
@@ -221,7 +293,6 @@
                 placeholder="Provide specific context..."
               ></textarea>
             </div>
-
           </div>
           <div class="modal-footer border-0">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -236,6 +307,46 @@
 
   </div>
 </template>
+
+<style scoped>
+.profile-banner {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+}
+
+.badge-item {
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+.badge-item:hover {
+    transform: translateY(-3px);
+}
+.drop-shadow {
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+.grayscale {
+    filter: grayscale(100%);
+}
+
+.card-hover {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1) !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.z-2 {
+    z-index: 2;
+}
+</style>
 
 <script>
 import { ref, defineComponent, watch } from 'vue';
@@ -328,7 +439,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import debounce from "lodash.debounce";
@@ -360,11 +471,34 @@ const reportReasonCategory = ref("");
 const reportDetails = ref("");
 const showReportError = ref(false);
 const reporting = ref(false);
+const showLockedBadges = ref(false);
+
+const unlockedBadges = computed(() => {
+  return user.value?.badges?.filter(b => !b.locked) || [];
+});
+
+const lockedBadges = computed(() => {
+  return user.value?.badges?.filter(b => b.locked) || [];
+});
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "Unknown";
   const d = new Date(dateStr);
   return isNaN(d.getTime()) ? "Unknown" : d.toLocaleDateString();
+};
+
+const formatBadgeTooltip = (badge) => {
+  let text = badge.description || badge.badge_name;
+
+  if (badge.trust_threshold && badge.trust_threshold > 0) {
+    text += `\nRequired trust score: ${badge.trust_threshold}`;
+  }
+
+  if (badge.awarded_at) {
+    text += `\nAwarded on: ${new Date(badge.awarded_at).toLocaleDateString()}`;
+  }
+
+  return text;
 };
 
 const fetchUser = async () => {
@@ -514,17 +648,34 @@ const submitReport = async () => {
   }
 };
 
-onMounted(fetchUser);
+onMounted(async () => {
+  await fetchUser();
+
+  setTimeout(() => {
+  if (!window.bootstrap) return;
+
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipTriggerList.forEach(el => {
+    new window.bootstrap.Tooltip(el);
+  });
+}, 0);
+});
+
 
 watch(
-  () => route.params.id,
-  (newId, oldId) => {
-    if (newId !== oldId) {
-      activeTab.value = "posts";
-      postSearchTerm.value = "";
-      commentSearchTerm.value = "";
-      fetchUser();
-    }
+  user,
+  (newUser) => {
+    if (!newUser) return;
+
+    setTimeout(() => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltipTriggerList.forEach(el => {
+        new bootstrap.Tooltip(el);
+      });
+    }, 0);
+
+    if (activeTab.value === "posts") fetchPosts(1);
+    else if (activeTab.value === "comments" && isSelf.value) fetchComments(1);
   }
 );
 
@@ -546,15 +697,3 @@ watch(activeTab, (newTab) => {
   }
 });
 </script>
-
-<style scoped>
-.card {
-  border-radius: 15px;
-}
-.opacity-50 {
-  opacity: 0.5;
-}
-.input-group .form-control {
-  text-align: center;
-}
-</style>

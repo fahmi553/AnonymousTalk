@@ -15,7 +15,20 @@ class Badge extends Model
         'badge_name',
         'description',
         'trust_threshold',
+        'icon_path',
+        'badge_type',
     ];
+
+    protected $appends = ['icon_url'];
+
+    public function getIconUrlAttribute()
+    {
+        if (!$this->icon_path) {
+            return null;
+        }
+
+        return asset($this->icon_path);
+    }
 
     public function users()
     {

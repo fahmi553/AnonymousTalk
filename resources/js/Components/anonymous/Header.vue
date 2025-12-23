@@ -1,7 +1,7 @@
 <template>
   <header class="header d-flex justify-content-between align-items-center p-3 bg-dark text-white shadow-sm border-bottom border-secondary">
     <div class="d-flex align-items-center">
-            <img :src="myLogo" alt="My Company Logo" class="header-logo me-3">
+      <img :src="myLogo" alt="My Company Logo" class="header-logo me-3">
       <h1 class="me-4 mb-0 h4">Anonymous Talk</h1>
       <nav class="d-flex">
         <router-link to="/" class="nav-link text-white me-3">Home</router-link>
@@ -17,6 +17,14 @@
     <div class="d-flex align-items-center gap-2">
       <ThemeToggle />
       <template v-if="authUser">
+
+        <img
+            :src="authUser.avatar ? `/images/avatars/${authUser.avatar}` : '/images/avatars/default.jpg'"
+            alt="Profile"
+            class="rounded-circle border border-light"
+            style="width: 32px; height: 32px; object-fit: cover;"
+        >
+
         <span class="text-white me-3">Hi, {{ authUser.username }}</span>
         <button @click="logout" class="btn btn-light btn-sm">Logout</button>
       </template>

@@ -17,5 +17,7 @@ class DatabaseSeeder extends Seeder
             TrustScoreLogSeeder::class,
             BadgeSeeder::class,
         ]);
+
+        \App\Models\User::all()->each->updateBadges();
     }
 }

@@ -67,7 +67,10 @@ class PostController extends Controller
             'content'       => $post->content,
             'status'        => $post->status,
             'created_at'    => $post->created_at->toISOString(),
-            'user'          => ['username' => $post->user->username ?? 'Anonymous'],
+            'user'          => [
+                'username' => $post->user->username ?? 'Anonymous',
+                'avatar'   => $post->user->avatar ?? 'default.jpg', // <--- ADD THIS
+            ],
             'category'      => $post->categoryModel?->name,
             'comments'      => $post->comments->map(fn($c) => $this->formatComment($c)),
             'likes_count'   => $post->likes_count,
@@ -255,7 +258,11 @@ class PostController extends Controller
             'content'     => $post->content,
             'category'    => $post->categoryModel->name ?? null,
             'created_at'  => $post->created_at?->toISOString(),
-            'user'        => ['user_id' => $post->user->user_id ?? null, 'username' => $post->user->username ?? 'Anonymous'],
+            'user'        => [
+                'user_id'  => $post->user->user_id ?? null,
+                'username' => $post->user->username ?? 'Anonymous',
+                'avatar'   => $post->user->avatar ?? 'default.jpg'
+            ],
             'likes_count' => $post->likes_count ?? $post->likes()->count(),
             'liked'       => $liked,
             'comments'    => $post->comments->map(fn($c) => $this->formatComment($c))->values(),
@@ -271,6 +278,7 @@ class PostController extends Controller
             'user'       => [
                 'user_id'  => $comment->user->user_id ?? null,
                 'username' => $comment->user->username ?? 'Anonymous',
+                'avatar'   => $comment->user->avatar ?? 'default.jpg',
             ],
             'parent_id'       => $comment->parent_id,
             'reply_to_user_id'=> $comment->parentComment?->user?->user_id,
@@ -281,8 +289,14 @@ class PostController extends Controller
 
     public function getTrendingPosts()
     {
-        $trendingPosts = Post::with(['user:user_id,username','categoryModel:category_id,name'])
+        $trendingPosts = Post::with([
+                'user:user_id,username,avatar',
+                'categoryModel:category_id,name'
+            ])
             ->withCount(['likes', 'comments'])
+
+            ->where('status', 'published')
+
             ->where('created_at', '>=', now()->subHours(72))
             ->orderBy('comments_count', 'desc')
             ->orderBy('likes_count', 'desc')
@@ -292,7 +306,10 @@ class PostController extends Controller
         return response()->json($trendingPosts->map(fn($post) => [
             'post_id' => $post->post_id,
             'title' => $post->title,
-            'user' => ['username' => $post->user->username ?? 'Anonymous'],
+            'user' => [
+                'username' => $post->user->username ?? 'Anonymous',
+                'avatar'   => $post->user->avatar ?? 'default.jpg'
+            ],
             'comments_count' => $post->comments_count,
             'likes_count' => $post->likes_count,
         ]));

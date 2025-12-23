@@ -17,7 +17,9 @@ Route::get('/posts/trending', [PostController::class, 'getTrendingPosts']);
 Route::get('/posts/{postId}', [PostController::class, 'showApi']);
 Route::get('/posts/{postId}/comments', [CommentController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
-Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.visit');
+Route::get('/profile/{id}', [ProfileController::class, 'show'])
+    ->name('profile.visit')
+    ->where('id', '[0-9]+');
 // Route::get('/profile/{id}/posts', [ProfileController::class, 'userPosts']);
 // Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
 
@@ -37,11 +39,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/comments/{id}/reports', [CommentController::class, 'showReports'])->middleware('admin');
 
     // Self profile
+    Route::get('/profile/avatars', [ProfileController::class, 'getAvatars']);
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
     Route::post('/profile/toggle-hide-all-posts', [ProfileController::class, 'toggleHideAllPosts']);
+
 
     Route::post('/report/user/{user}', [ReportController::class, 'reportUser']);
 

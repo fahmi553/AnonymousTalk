@@ -1,12 +1,14 @@
 <template>
   <div class="d-flex mt-3 mb-4 position-relative">
     <div class="me-3 flex-shrink-0">
-      <div
-        class="rounded-circle bg-body-secondary text-body-emphasis d-flex align-items-center justify-content-center"
-        style="width: 40px; height: 40px; font-weight: bold;"
-      >
-        {{ userInitial }}
-      </div>
+
+      <img
+        :src="userAvatar ? `/images/avatars/${userAvatar}` : '/images/avatars/default.jpg'"
+        alt="My Avatar"
+        class="rounded-circle border bg-white"
+        style="width: 40px; height: 40px; object-fit: cover;"
+      />
+
     </div>
 
     <div class="flex-grow-1">
@@ -17,23 +19,23 @@
         placeholder="Write a comment..."
         :disabled="isSubmitting"
       ></textarea>
-      
-      <button 
-        class="btn btn-sm btn-primary" 
+
+      <button
+        class="btn btn-sm btn-primary"
         @click="submitComment"
         :disabled="isSubmitting || !content.trim()"
       >
         <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
-        <i v-else class="fas fa-paper-plane me-1"></i> 
+        <i v-else class="fas fa-paper-plane me-1"></i>
         Submit Comment
       </button>
     </div>
 
-    <div 
-      v-if="showToast" 
-      class="toast align-items-center border-0 position-absolute top-0 end-0 m-3 show" 
+    <div
+      v-if="showToast"
+      class="toast align-items-center border-0 position-absolute top-0 end-0 m-3 show"
       :class="toastClass"
-      role="alert" 
+      role="alert"
       style="z-index: 100;"
     >
       <div class="d-flex">
@@ -53,7 +55,8 @@ import axios from 'axios'
 const props = defineProps({
   postId: { type: Number, required: true },
   authUserId: { type: Number, required: true },
-  userInitial: { type: String, default: '?' }
+  userInitial: { type: String, default: '?' },
+  userAvatar: { type: String, default: null }
 })
 
 const emit = defineEmits(['success'])
@@ -81,7 +84,7 @@ const submitComment = async () => {
     } else {
         emit('success', res.data.data)
     }
-    content.value = "" 
+    content.value = ""
 
   } catch (e) {
     console.error(e)

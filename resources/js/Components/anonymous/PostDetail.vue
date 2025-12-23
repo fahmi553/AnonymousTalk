@@ -13,20 +13,19 @@
       <div class="card bg-body shadow-sm border border-secondary rounded-lg mb-4">
         <div class="card-body p-4 p-md-5">
           <div class="d-flex align-items-center mb-4">
-            <div
-              class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-              style="width: 50px; height: 50px; font-size: 1.25rem; font-weight: 500;"
-            >
-              {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
-            </div>
+            <img
+                :src="post.user?.avatar ? `/images/avatars/${post.user.avatar}` : '/images/avatars/default.jpg'"
+                :alt="post.user?.username || 'User'"
+                class="rounded-circle me-3 flex-shrink-0 border bg-white"
+                style="width: 50px; height: 50px; object-fit: cover;"
+            />
             <div class="flex-grow-1">
-              <div class="fw-bold fs-5 text-body-emphasis">
-                {{ post.user?.username ?? 'Anonymous' }}
-              </div>
-              <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
+                <div class="fw-bold fs-5 text-body-emphasis">
+                    {{ post.user?.username ?? 'Anonymous' }}
+                </div>
+                <small class="text-muted">{{ timeAgo(post.created_at) }}</small>
             </div>
           </div>
-
           <div v-if="post.category" class="mb-3">
             <span
               class="badge rounded-pill px-3 py-2 fs-6 shadow-sm"
@@ -84,8 +83,8 @@
             :post-id="post.post_id"
             :auth-user-id="authUserId"
             :user-initial="authUserIdInitial"
-            @success="handleCommentSuccess"
-          />
+            :user-avatar="authUserAvatar"  @success="handleCommentSuccess"
+           />
         </div>
 
         <p v-else class="text-muted mt-3 alert alert-secondary">
@@ -225,6 +224,7 @@ const route = useRoute()
 const postId = route.params.id
 const authUserId = window.authUserId || null
 const authUserIdInitial = window.authUserName ? window.authUserName.charAt(0).toUpperCase() : "?"
+const authUserAvatar = window.authUserAvatar || null
 const post = ref({ comments: [] })
 const loading = ref(true)
 const error = ref("")

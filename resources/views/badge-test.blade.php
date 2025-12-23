@@ -5,131 +5,145 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body { font-family: sans-serif; padding: 20px; }
-        button { margin: 5px; padding: 10px; }
-        .badge {
-            display: inline-block;
-            margin: 3px;
-            padding: 5px 10px;
-            background: #4caf50;
-            color: white;
-            border-radius: 5px;
-        }
-        .trust {
-            background: #2196f3;
-        }
-        .behavior {
-            background: #4caf50;
-        }
-        .warning {
-            background: #f44336;
-        }
+        button { margin: 3px; padding: 8px 12px; }
+        .badge { display: inline-block; margin: 3px; padding: 5px 10px; background: #4caf50; color: white; border-radius: 5px; }
+        .section { margin-top: 20px; }
     </style>
 </head>
 <body>
+    <h1>Badge Test for {{ $user->username }}</h1>
+    <p>Trust Score: <span id="trust-score">{{ $user->trust_score }}</span>%</p>
 
-<h1>Badge Test for {{ $user->username }}</h1>
-<p>Trust Score: <strong><span id="trust-score">0</span>%</strong></p>
+    <div class="section">
+        <h3>Trust Controls</h3>
+        <button onclick="changeTrust(5)">+5 Trust</button>
+        <button onclick="changeTrust(10)">+10 Trust</button>
+        <button onclick="changeTrust(-5)">-5 Trust</button>
+        <button onclick="changeTrust(-10)">-10 Trust</button>
+        <button onclick="resetTrust()">Reset Trust</button>
+        <button onclick="recalculate()">Recalculate Badges</button>
+    </div>
 
-<div>
-    <button onclick="changeTrust(5)">+5 Trust</button>
-    <button onclick="changeTrust(10)">+10 Trust</button>
-    <button onclick="changeTrust(-5)">-5 Trust</button>
-    <button onclick="changeTrust(-10)">-10 Trust</button>
-    <button onclick="resetTrust()">Reset</button>
-</div>
+    <div class="section">
+        <h3>Behavior Controls</h3>
+        <p>Posts: <span id="posts-count">0</span>
+            <button onclick="changePosts(1)">+1</button>
+            <button onclick="changePosts(-1)">-1</button>
+        </p>
+        <p>Comments: <span id="comments-count">0</span>
+            <button onclick="changeComments(1)">+1</button>
+            <button onclick="changeComments(-1)">-1</button>
+        </p>
+        <p>Safe Replies: <span id="safe-replies-count">0</span>
+            <button onclick="changeSafeReplies(1)">+1</button>
+            <button onclick="changeSafeReplies(-1)">-1</button>
+        </p>
+        <p>Moderated Count: <span id="moderated-count">0</span>
+            <button onclick="changeModerated(1)">+1</button>
+            <button onclick="changeModerated(-1)">-1</button>
+        </p>
+    </div>
 
-<h2>Badges</h2>
-<div id="badges"></div>
+    <div class="section">
+        <h2>Badges:</h2>
+        <div id="badges">
+            @foreach($user->badges as $badge)
+                <span class="badge">{{ $badge->badge_name }}</span>
+            @endforeach
+        </div>
+    </div>
 
-<script>
-let user = {
-    trustScore: 0,
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let user = {
+            trustScore: {{ $user->trust_score }},
+            badges: @json($user->badges->pluck('badge_name')),
+            posts: 0,
+            comments: 0,
+            safeReplies: 0,
+            moderated: 0
+        };
 
-    // Simulated behavior counters (static for testing meaning)
-    publishedPosts: 12,
-    publishedComments: 25,
-    moderatedCount: 0,
-    safeReplies: 12
-};
+        function changeTrust(amount) {
+            user.trustScore = Math.min(100, Math.max(0, user.trustScore + amount));
+            recalculate();
+        }
 
-function changeTrust(amount) {
-    user.trustScore = Math.max(0, Math.min(100, user.trustScore + amount));
-    recalculateBadges();
-}
+        function changePosts(amount) {
+            user.posts = Math.max(0, user.posts + amount);
+            $('#posts-count').text(user.posts);
+            recalculate();
+        }
 
-function resetTrust() {
-    user.trustScore = 0;
-    recalculateBadges();
-}
+        function changeComments(amount) {
+            user.comments = Math.max(0, user.comments + amount);
+            $('#comments-count').text(user.comments);
+            recalculate();
+        }
 
-function recalculateBadges() {
-    document.getElementById('trust-score').innerText = user.trustScore;
+        function changeSafeReplies(amount) {
+            user.safeReplies = Math.max(0, user.safeReplies + amount);
+            $('#safe-replies-count').text(user.safeReplies);
+            recalculate();
+        }
 
-    let badges = [];
+        function changeModerated(amount) {
+            user.moderated = Math.max(0, user.moderated + amount);
+            $('#moderated-count').text(user.moderated);
+            recalculate();
+        }
 
-    /* ==========================
-       TRUST BADGE (ONE ONLY)
-    ========================== */
-    let trustBadge = null;
+        function resetTrust() {
+            user.trustScore = 0;
+            user.posts = 0;
+            user.comments = 0;
+            user.safeReplies = 0;
+            user.moderated = 0;
+            $('#posts-count').text(0);
+            $('#comments-count').text(0);
+            $('#safe-replies-count').text(0);
+            $('#moderated-count').text(0);
+            recalculate();
+        }
 
-    if (user.trustScore >= 100) trustBadge = 'Community Guardian';
-    else if (user.trustScore >= 80) trustBadge = 'Trusted Contributor';
-    else if (user.trustScore >= 50) trustBadge = 'Community Pillar';
-    else if (user.trustScore >= 30) trustBadge = 'Trusted Voice';
-    else if (user.trustScore >= 10) trustBadge = 'Regular';
-    else trustBadge = 'Newcomer';
+        function recalculate() {
+            let newBadges = [];
 
-    badges.push({ name: trustBadge, type: 'trust' });
+            // Trust-based badges
+            // Trust-based badges (highest only)
+if (user.trustScore >= 90) newBadges.push('Community Guardian');
+else if (user.trustScore >= 80) newBadges.push('Trusted Contributor');
+else if (user.trustScore >= 70) newBadges.push('Verified Member');
+else if (user.trustScore >= 50) newBadges.push('Community Pillar');
+else if (user.trustScore >= 30) newBadges.push('Trusted Voice');
+else if (user.trustScore >= 10) newBadges.push('Regular');
+else newBadges.push('Newcomer');
 
-    /* ==========================
-       BEHAVIOR BADGES (STACK)
-    ========================== */
-    if (user.publishedPosts >= 10) {
-        badges.push({ name: 'Consistent Poster', type: 'behavior' });
-    }
 
-    if (user.publishedComments >= 20) {
-        badges.push({ name: 'Helpful Commenter', type: 'behavior' });
-    }
+            // Behavior badges
+            if (user.posts >= 10) newBadges.push('Consistent Poster');
+            if (user.comments >= 20) newBadges.push('Helpful Commenter');
+            if (user.moderated === 0) newBadges.push('Civil Contributor');
+            if (user.safeReplies >= 10) newBadges.push('Respectful Debater');
+            if (user.comments >= user.posts * 3 && user.posts > 0) newBadges.push('Listener');
+            if (user.moderated >= 3) newBadges.push('Under Review');
+            if (user.trustScore < 10) newBadges.push('On Probation');
 
-    if (user.moderatedCount === 0) {
-        badges.push({ name: 'Civil Contributor', type: 'behavior' });
-    }
+            user.badges = newBadges;
+            updateUI();
+        }
 
-    if (user.safeReplies >= 10) {
-        badges.push({ name: 'Respectful Debater', type: 'behavior' });
-    }
+        function updateUI() {
+            $('#trust-score').text(user.trustScore);
+            let badgesHtml = '';
+            user.badges.forEach(function(b) {
+                badgesHtml += '<span class="badge">' + b + '</span>';
+            });
+            $('#badges').html(badgesHtml);
+        }
 
-    if (user.publishedPosts > 0 && user.publishedComments >= user.publishedPosts * 3) {
-        badges.push({ name: 'Listener', type: 'behavior' });
-    }
-
-    if (user.moderatedCount >= 3) {
-        badges.push({ name: 'Under Review', type: 'warning' });
-    }
-
-    if (user.trustScore < 10) {
-        badges.push({ name: 'On Probation', type: 'warning' });
-    }
-
-    renderBadges(badges);
-}
-
-function renderBadges(badges) {
-    const container = document.getElementById('badges');
-    container.innerHTML = '';
-
-    badges.forEach(b => {
-        const span = document.createElement('span');
-        span.className = 'badge ' + b.type;
-        span.innerText = b.name;
-        container.appendChild(span);
-    });
-}
-
-// Initial render
-recalculateBadges();
-</script>
-
+        // Initial calculation
+        recalculate();
+    </script>
 </body>
 </html>

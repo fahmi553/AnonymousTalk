@@ -9,9 +9,24 @@ use App\Helpers\UsernameGenerator;
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Comment;
+use App\Models\Badge;
 
 class ProfileController extends Controller
 {
+
+    private $allowedAvatars = [
+        'default.jpg',
+        'avatar1.jpg',
+        'avatar2.jpg',
+        'avatar3.jpg',
+        'avatar4.jpg',
+        'avatar5.jpg',
+        'avatar6.jpg',
+        'avatar7.jpg',
+        'avatar8.jpg',
+        'avatar9.jpg',
+    ];
+
     public function show(Request $request, $id = null)
     {
         $profileUser = $id
@@ -25,49 +40,108 @@ class ProfileController extends Controller
         $authUser = auth()->user();
         $isOwner = $authUser && $authUser->user_id === $profileUser->user_id;
 
-        if ($request->boolean('user_only')) {
-            $postCount = $profileUser->posts()->count();
-            $commentCount = $profileUser->comments()->count();
+        $allBadges = Badge::all();
+        $profileUserArray = $profileUser->toArray();
 
-            $badges = $profileUser->badges->map(function ($b) {
+        $trustBadges = $allBadges
+            ->whereNotNull('trust_threshold')
+            ->sortByDesc('trust_threshold');
+
+        $highestTrustBadge = $trustBadges->first(
+            fn ($b) => $profileUser->trust_score >= $b->trust_threshold
+        );
+        $profileUserArray['badges'] = $allBadges
+            ->map(function ($badge) use ($profileUser, $highestTrustBadge) {
+
+                $earnedBadge = $profileUser->badges
+                    ->firstWhere('badge_id', $badge->badge_id);
+
+                if ($badge->trust_threshold !== null) {
+
+                    if (
+                        $highestTrustBadge &&
+                        $badge->trust_threshold < $highestTrustBadge->trust_threshold
+                    ) {
+                        return null;
+                    }
+
+                    return [
+                        'badge_id' => $badge->badge_id,
+                        'badge_name' => $badge->badge_name,
+                        'description' => $badge->description,
+                        'trust_threshold' => $badge->trust_threshold,
+                        'icon_url' => $badge->icon_url,
+                        'awarded_at' => $badge->trust_threshold <= $profileUser->trust_score
+                            ? now()
+                            : null,
+                        'reason' => "Earned for reaching trust score ≥ {$badge->trust_threshold}",
+                        'locked' => !$highestTrustBadge
+                            || $badge->trust_threshold > $highestTrustBadge->trust_threshold,
+                        'badge_type' => $badge->badge_type,
+                    ];
+                }
+                if ($badge->badge_type === 'status') {
+                    if (!$earnedBadge) {
+                        return null;
+                    }
+                }
                 return [
-                    'badge_id' => $b->badge_id,
-                    'badge_name' => $b->badge_name,
-                    'description' => $b->description,
-                    'trust_threshold' => $b->trust_threshold,
-                    'awarded_at' => $b->pivot->awarded_at ?? null,
+                    'badge_id' => $badge->badge_id,
+                    'badge_name' => $badge->badge_name,
+                    'description' => $badge->description,
+                    'trust_threshold' => null,
+                    'icon_url' => $badge->icon_url,
+                    'awarded_at' => $earnedBadge?->pivot?->awarded_at,
+                    'reason' => 'Earned for behavior',
+                    'locked' => $earnedBadge === null,
+                    'badge_type' => $badge->badge_type,
                 ];
-            });
+            })
+            ->filter()
+            ->sortBy(fn ($b) => $b['locked'])
+            ->values()
+            ->toArray();
+
+        if ($request->boolean('user_only')) {
+            $postCount = $profileUser->posts()->where('status', 'published')->count();
+            $commentCount = $profileUser->comments()->where('status', 'published')->count();
 
             return response()->json([
-                'user' => $profileUser,
+                'user' => $profileUserArray,
                 'is_owner' => $isOwner,
                 'comment_count' => $commentCount,
                 'posts_meta' => ['total' => $postCount],
                 'comments_meta' => ['total' => $commentCount],
-                'badges' => $badges,
             ]);
         }
 
         $perPage = (int) $request->input('per_page', 10);
-        $search = $request->input('search', null);
+        $search = $request->input('search');
 
         if ($request->input('tab') === 'posts') {
             $postsQuery = $profileUser->posts()
                 ->withCount(['comments', 'likes'])
+                ->with('user:user_id,username,avatar')
+                ->where('status', 'published')
                 ->latest();
 
             if (!$isOwner) {
                 if ($profileUser->hide_all_posts) {
                     return response()->json([
                         'posts' => [],
-                        'posts_meta' => ['total' => 0, 'current_page' => 1, 'last_page' => 1, 'per_page' => $perPage],
+                        'posts_meta' => [
+                            'total' => 0,
+                            'current_page' => 1,
+                            'last_page' => 1,
+                            'per_page' => $perPage
+                        ],
                     ]);
                 }
+
                 $postsQuery->where('hidden_in_profile', false);
             }
 
-            if (!empty($search) && $isOwner) {
+            if ($search && $isOwner) {
                 $postsQuery->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
                     ->orWhere('content', 'like', "%{$search}%");
@@ -77,6 +151,8 @@ class ProfileController extends Controller
             $postsPaginated = $postsQuery->paginate($perPage);
 
             return response()->json([
+                'user' => $profileUserArray,
+                'is_owner' => $isOwner,
                 'posts' => $postsPaginated->items(),
                 'posts_meta' => [
                     'current_page' => $postsPaginated->currentPage(),
@@ -90,15 +166,18 @@ class ProfileController extends Controller
         if ($request->input('tab') === 'comments' && $isOwner) {
             $commentsQuery = $profileUser->comments()
                 ->with('post:post_id,title')
+                ->where('status', 'published')
                 ->latest();
 
-            if (!empty($search)) {
+            if ($search) {
                 $commentsQuery->where('content', 'like', "%{$search}%");
             }
 
             $commentsPaginated = $commentsQuery->paginate($perPage);
 
             return response()->json([
+                'user' => $profileUserArray,
+                'is_owner' => $isOwner,
                 'comments' => $commentsPaginated->items(),
                 'comments_meta' => [
                     'current_page' => $commentsPaginated->currentPage(),
@@ -125,10 +204,15 @@ class ProfileController extends Controller
             'username' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
             'password' => 'nullable|string|min:8|confirmed',
+            'avatar' => 'nullable|string|in:' . implode(',', $this->allowedAvatars),
         ]);
 
         $user->username = $request->username;
         $user->email = $request->email;
+
+        if ($request->has('avatar')) {
+            $user->avatar = $request->avatar;
+        }
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
@@ -188,6 +272,14 @@ class ProfileController extends Controller
             'message' => $user->hide_all_posts
                 ? 'All posts are now hidden from your profile.'
                 : 'All posts are now visible on your profile.',
+        ]);
+    }
+
+    public function getAvatars()
+    {
+        return response()->json([
+            'avatars' => $this->allowedAvatars,
+            'path' => asset('images/avatars/') . '/'
         ]);
     }
 }

@@ -15,12 +15,15 @@ class CommentController extends Controller
     public function index($postId)
     {
         $comments = Comment::with([
+                'user:user_id,username,avatar',
                 'user.badges',
+                'parentComment.user:user_id,username,avatar',
                 'parentComment.user.badges',
                 'replies' => function($q) {
                     $q->where('status', 'published')
                     ->orderBy('created_at', 'asc');
                 },
+                'replies.user:user_id,username,avatar',
                 'replies.user.badges',
                 'replies.parentComment.user.badges',
                 'replies.replies'
@@ -47,6 +50,7 @@ class CommentController extends Controller
             'user'       => $comment->user ? [
                 'user_id'  => $comment->user->user_id,
                 'username' => $comment->user->username,
+                'avatar' => $comment->user->avatar ?? 'default.jpg',
                 'badges'   => $comment->user->badges->map(fn($b) => [
                     'badge_id'       => $b->badge_id,
                     'badge_name'     => $b->badge_name,

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('badge_id');
             $table->string('badge_name')->unique();
             $table->text('description')->nullable();
-            $table->integer('trust_threshold')->default(0);
+            $table->integer('trust_threshold')->nullable();
             $table->timestamps();
         });
     }

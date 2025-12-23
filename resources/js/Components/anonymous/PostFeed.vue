@@ -55,6 +55,7 @@
             </div>
           </div>
         </div>
+
         <div v-if="loading && posts.length === 0" class="text-center py-5">
           <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
           <p class="mt-3 text-muted">Loading posts...</p>
@@ -80,12 +81,14 @@
 
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div class="d-flex align-items-center">
-                <div
-                  class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                  style="width: 45px; height: 45px; font-weight: 500;"
+
+                <img
+                    :src="post.user?.avatar ? `/images/avatars/${post.user.avatar}` : '/images/avatars/default.jpg'"
+                    :alt="post.user?.username || 'User'"
+                    class="rounded-circle me-3 flex-shrink-0 border bg-white"
+                    style="width: 45px; height: 45px; object-fit: cover;"
                 >
-                  {{ (post.user?.username || '?').charAt(0).toUpperCase() }}
-                </div>
+
                 <div>
                   <a v-if="post.user && post.user.user_id" :href="'/profile/' + post.user.user_id" class="fw-bold text-body-emphasis text-decoration-none">{{ post.user.username }}</a>
                   <span v-else class="fw-bold text-body-emphasis">{{ post.user?.username ?? 'Anonymous' }}</span>
@@ -162,13 +165,13 @@
             </router-link>
           </div>
         </div>
-
         <div v-if="loading && posts.length > 0" class="text-center my-3">
           <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
           <span class="ms-2 text-muted small">Loading more posts...</span>
         </div>
 
       </div>
+
       <div class="col-lg-4">
 
         <div class="card bg-body shadow-sm border border-secondary rounded-lg mb-3">
