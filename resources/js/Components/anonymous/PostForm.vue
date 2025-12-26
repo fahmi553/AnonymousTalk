@@ -1,172 +1,176 @@
 <template>
-  <div class="guidelines-page pb-5">
+  <div class="container py-4" style="max-width: 700px;">
 
-    <div class="bg-dark text-white py-5 mb-5 border-bottom" style="border-color: var(--bs-primary) !important;">
-      <div class="container text-center" style="max-width: 700px;">
-        <i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
-        <h1 class="display-5 fw-bold">Community Guidelines</h1>
-        <p class="lead text-white-50">
-          We believe in free speech, but we also believe in safety.
-          Help us keep Anonymous Talk a place for open, respectful discussion.
-        </p>
-      </div>
-    </div>
-
-    <div class="container" style="max-width: 900px;">
-
-      <div class="row g-4 mb-5">
-        <div class="col-md-4">
-          <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
-            <div class="card-body text-center p-4">
-              <div class="icon-box bg-success-subtle text-success mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center">
-                <i class="fas fa-shield-alt fa-lg"></i>
-              </div>
-              <h5 class="fw-bold">Stay Safe</h5>
-              <p class="small text-secondary mb-0">Never share your real name, address, or financial details. Anonymity is your shield.</p>
+    <Teleport to="body">
+        <div v-if="showSuccessToast" class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show" style="z-index: 1055;">
+            <div class="d-flex">
+                <div class="toast-body"><i class="fas fa-check-circle me-2"></i> {{ successMessage }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="showSuccessToast = false"></button>
             </div>
-          </div>
         </div>
-        <div class="col-md-4">
-          <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
-            <div class="card-body text-center p-4">
-              <div class="icon-box bg-primary-subtle text-primary mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center">
-                <i class="fas fa-heart fa-lg"></i>
-              </div>
-              <h5 class="fw-bold">Be Civil</h5>
-              <p class="small text-secondary mb-0">Disagreement is fine; disrespect is not. Attack ideas, not people.</p>
+        <div v-if="showWarningToast" class="toast align-items-center text-bg-warning border-0 position-fixed top-0 end-0 m-3 show" style="z-index: 1055;">
+            <div class="d-flex">
+                <div class="toast-body fw-bold text-dark"><i class="fas fa-exclamation-circle me-2"></i> {{ warningMessage }}</div>
+                <button type="button" class="btn-close btn-close-black me-2 m-auto" @click="showWarningToast = false"></button>
             </div>
-          </div>
         </div>
-        <div class="col-md-4">
-          <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
-            <div class="card-body text-center p-4">
-              <div class="icon-box bg-warning-subtle text-warning mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center">
-                <i class="fas fa-chart-line fa-lg"></i>
-              </div>
-              <h5 class="fw-bold">Build Trust</h5>
-              <p class="small text-secondary mb-0">Good behavior earns Trust Score points. Bad behavior restricts your account.</p>
+        <div v-if="showErrorToast" class="toast align-items-center text-bg-danger border-0 position-fixed top-0 end-0 m-3 show" style="z-index: 1055;">
+            <div class="d-flex">
+                <div class="toast-body"><i class="fas fa-exclamation-triangle me-2"></i> {{ errorMessage }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="showErrorToast = false"></button>
             </div>
-          </div>
         </div>
-      </div>
+    </Teleport>
 
-      <h3 class="fw-bold mb-4 border-bottom pb-2">The Code of Conduct</h3>
+    <div class="card bg-body shadow-sm border border-secondary-subtle rounded-4">
+      <div class="card-body p-4 p-md-5">
 
-      <div class="accordion shadow-sm rounded-3 overflow-hidden" id="rulesAccordion">
+        <h3 class="mb-4 fw-bold text-body-emphasis">Create Post</h3>
 
-        <div class="accordion-item border-0 border-bottom">
-          <h2 class="accordion-header">
-            <button class="accordion-button fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#rule1" aria-expanded="true">
-              1. No Hate Speech or Harassment
+        <form @submit.prevent="submitPost">
+
+          <div class="mb-4">
+            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Title</label>
+            <input
+                v-model="title"
+                type="text"
+                class="form-control form-control-lg"
+                :class="{ 'is-invalid': showErrors && !title.trim() }"
+                placeholder="Give your post a catchy title..."
+            />
+            <div v-if="showErrors && !title.trim()" class="invalid-feedback">Title is required.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Category</label>
+            <select
+                v-model="category"
+                class="form-select py-2"
+                :class="{ 'is-invalid': showErrors && !category }"
+            >
+              <option disabled value="">Select a topic...</option>
+              <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">{{ cat.name }}</option>
+            </select>
+            <div v-if="showErrors && !category" class="invalid-feedback">Category is required.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Content</label>
+            <textarea
+                v-model="content"
+                class="form-control"
+                rows="6"
+                :class="{ 'is-invalid': showErrors && !content.trim() }"
+                placeholder="Share your thoughts with the community..."
+                style="resize: none;"
+            ></textarea>
+            <div v-if="showErrors && !content.trim()" class="invalid-feedback">Content is required.</div>
+          </div>
+
+          <hr class="my-4 border-secondary-subtle">
+
+          <div class="d-flex justify-content-end gap-2">
+            <router-link to="/" class="btn btn-link text-decoration-none text-secondary px-4 fw-bold">
+                Cancel
+            </router-link>
+
+            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold" :disabled="isSubmitting">
+              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+              <span v-else>Post</span>
             </button>
-          </h2>
-          <div id="rule1" class="accordion-collapse collapse show" data-bs-parent="#rulesAccordion">
-            <div class="accordion-body text-body">
-              We have a zero-tolerance policy for hate speech. Content that attacks, threatens, or insults individuals or groups based on race, religion, gender, sexual orientation, or disability will be removed immediately.
-              <br><br>
-              <strong class="text-primary">Consequence:</strong> Immediate ban or massive Trust Score penalty.
-            </div>
           </div>
-        </div>
 
-        <div class="accordion-item border-0 border-bottom">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#rule2">
-              2. No Doxxing (Revealing Private Info)
-            </button>
-          </h2>
-          <div id="rule2" class="accordion-collapse collapse" data-bs-parent="#rulesAccordion">
-            <div class="accordion-body text-body">
-              Do not post personal information about yourself or others. This includes real names, phone numbers, addresses, or links to personal social media profiles.
-              <br><br>
-              <strong class="text-primary">Consequence:</strong> Permanent account suspension.
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item border-0 border-bottom">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#rule3">
-              3. No Spam or Self-Promotion
-            </button>
-          </h2>
-          <div id="rule3" class="accordion-collapse collapse" data-bs-parent="#rulesAccordion">
-            <div class="accordion-body text-body">
-              Anonymous Talk is for conversation, not advertising. Do not post repetitive content, affiliate links, or promote products/services.
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item border-0">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#rule4">
-              4. Trust Score System
-            </button>
-          </h2>
-          <div id="rule4" class="accordion-collapse collapse" data-bs-parent="#rulesAccordion">
-            <div class="accordion-body text-body">
-              <p>Your actions on the platform affect your <strong class="text-primary">Trust Score</strong>.</p>
-              <ul class="mb-0">
-                <li><strong>Gaining Trust:</strong> Consistent posting, receiving likes, and helpful comments.</li>
-                <li><strong>Losing Trust:</strong> Having posts reported, spamming, or violating these guidelines.</li>
-              </ul>
-              <p class="mt-2 mb-0 fst-italic text-secondary small">Users with low trust scores may be restricted from posting or commenting.</p>
-            </div>
-          </div>
-        </div>
-
+        </form>
       </div>
-
-      <div class="alert alert-light border shadow-sm mt-5 d-flex flex-column flex-md-row align-items-center justify-content-between p-4 rounded-4 bg-body-tertiary">
-        <div class="mb-3 mb-md-0">
-          <h5 class="fw-bold mb-1">See something wrong?</h5>
-          <p class="mb-0 text-secondary small">If you see content that violates these rules, please report it.</p>
-        </div>
-        <button @click="$router.push('/help')" class="btn btn-outline-primary rounded-pill px-4">
-          <i class="fas fa-flag me-2"></i>How to Report
-        </button>
-      </div>
-
     </div>
   </div>
 </template>
 
+<script setup>
+import { ref, onMounted } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
+
+// (Scripts remain unchanged)
+const router = useRouter();
+const title = ref("");
+const content = ref("");
+const category = ref("");
+const categories = ref([]);
+const showErrors = ref(false);
+const isSubmitting = ref(false);
+const showSuccessToast = ref(false);
+const showWarningToast = ref(false);
+const showErrorToast = ref(false);
+const successMessage = ref("Post created successfully!");
+const warningMessage = ref("");
+const errorMessage = ref("Failed to create post.");
+
+const fetchCategories = async () => {
+  try {
+    const res = await axios.get("/api/categories");
+    categories.value = res.data;
+  } catch (err) {
+    console.error("Failed to load categories", err);
+  }
+};
+
+const submitPost = async () => {
+  showErrors.value = true;
+  if (!title.value.trim() || !content.value.trim() || !category.value) return;
+
+  isSubmitting.value = true;
+
+  try {
+    const res = await axios.post("/api/posts", {
+      title: title.value,
+      content: content.value,
+      category_id: category.value,
+    });
+
+    title.value = "";
+    content.value = "";
+    category.value = "";
+    showErrors.value = false;
+
+    if (res.data.status === 'warning') {
+      warningMessage.value = res.data.message;
+      showWarningToast.value = true;
+      window.dispatchEvent(new Event('notification-update-needed'));
+      setTimeout(() => {
+        showWarningToast.value = false;
+        router.push("/");
+      }, 4000);
+    } else {
+      successMessage.value = res.data.message;
+      showSuccessToast.value = true;
+      window.dispatchEvent(new Event('notification-update-needed'));
+      setTimeout(() => {
+        showSuccessToast.value = false;
+        router.push("/");
+      }, 2000);
+    }
+
+  } catch (err) {
+    console.error("Post failed", err);
+    errorMessage.value = err.response?.data?.message || "Failed to create post.";
+    showErrorToast.value = true;
+    setTimeout(() => (showErrorToast.value = false), 3000);
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+onMounted(fetchCategories);
+</script>
+
 <style scoped>
-.icon-box {
-  width: 60px;
-  height: 60px;
+.ls-1 {
+    letter-spacing: 0.5px;
 }
 
-/* --- FORCE ACCORDION TO MATCH DARK/LIGHT MODE --- */
-
-/* 1. Force the Item background to be the body background (Dark in dark mode) */
-.accordion-item {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
-}
-
-/* 2. Force the collapsed button to match the body background */
-.accordion-button.collapsed {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
-}
-
-/* 3. Force the Expanded Button to be Purple-Tinted */
-.accordion-button:not(.collapsed) {
-  background-color: var(--bs-primary-bg-subtle);
-  color: var(--bs-primary);
-  box-shadow: none; /* Remove blue glow */
-}
-
-/* 4. Focus Ring - Purple */
-.accordion-button:focus {
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-/* 5. Ensure the Body Text inside is visible */
-.accordion-body {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
 </style>
