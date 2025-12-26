@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Comment;
 use Illuminate\Http\Request;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Models\CommentSentimentLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Notifications\NewCommentNotification;
 
 class CommentController extends Controller
 {
@@ -74,6 +76,13 @@ class CommentController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->can_comment) {
+            return response()->json([
+                'message' => 'Your trust score is too low to comment.',
+                'status' => 'error'
+            ], 403);
+        }
         $request->validate([
             'post_id'   => 'required|exists:posts,post_id',
             'content'   => 'required|string|max:1000',
@@ -135,13 +144,30 @@ class CommentController extends Controller
 
         $user->updateBadges();
 
+        $post = Post::find($request->post_id);
+
+        if ($post && !$isToxic) {
+
+            if ($request->parent_id) {
+                $parentComment = Comment::find($request->parent_id);
+
+                if ($parentComment && $parentComment->user_id !== auth()->id()) {
+                    $parentComment->user->notify(new NewCommentNotification(auth()->user(), $post, $parentComment));
+                }
+            }
+            elseif ($post->user_id !== auth()->id()) {
+                $post->user->notify(new NewCommentNotification(auth()->user(), $post));
+            }
+        }
+
         $comment->load(['user', 'parentComment.user', 'replies']);
+
         $responsePayload = $this->formatComment($comment);
 
         return response()->json([
             'data' => $responsePayload,
             'is_flagged' => $isToxic,
-            'message' => $isToxic ? '⚠️ Comment submitted but held for moderation.' : 'Comment posted successfully!'
+            'message' => $isToxic ? 'Comment submitted but held for moderation.' : 'Comment posted successfully!'
         ]);
     }
 

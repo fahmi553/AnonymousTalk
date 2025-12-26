@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Post;
 use App\Models\Like;
+use App\Notifications\PostLikedNotification;
 
 class LikeController extends Controller
 {
@@ -34,6 +35,10 @@ class LikeController extends Controller
                 'user_id' => $userId,
             ]);
             $liked = true;
+
+            if ($post->user_id !== $userId) {
+                $post->user->notify(new PostLikedNotification(Auth::user(), $post));
+            }
         }
 
         return response()->json([

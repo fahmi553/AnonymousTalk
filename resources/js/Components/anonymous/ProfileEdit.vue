@@ -207,6 +207,7 @@ const updateProfile = async () => {
   try {
     await axios.patch("/api/profile", form.value);
     router.push({ path: "/profile", query: { updated: "true" } });
+    window.dispatchEvent(new Event('notification-update-needed'));
   } catch (err) {
     console.error("Update failed", err);
     errorMessage.value = err.response?.data?.message || "Failed to update profile.";

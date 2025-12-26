@@ -9,14 +9,15 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('avatar')->nullable()->default('default.jpg')->after('username');
+            $table->timestamp('banned_at')->nullable()->after('trust_score');
+            $table->string('ban_reason')->nullable()->after('banned_at');
         });
     }
 
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('avatar');
+            $table->dropColumn(['banned_at', 'ban_reason']);
         });
     }
 };

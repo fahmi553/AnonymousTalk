@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\NotificationController;
 
 // Public routes
 Route::get('/posts', [PostController::class, 'index']);
@@ -45,22 +46,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
     Route::post('/profile/toggle-hide-all-posts', [ProfileController::class, 'toggleHideAllPosts']);
-
-
     Route::post('/report/user/{user}', [ReportController::class, 'reportUser']);
-
-    // Post moderation
-    Route::post('/moderate/post/{id}/approve', [ModerationController::class, 'approvePost']);
-    Route::post('/moderate/post/{id}/hide', [ModerationController::class, 'hidePost']);
-    Route::post('/moderate/post/{id}/delete', [ModerationController::class, 'deletePost']);
-
-    // Comment moderation
-    Route::post('/moderate/comment/{id}/approve', [ModerationController::class, 'approveComment']);
-    Route::post('/moderate/comment/{id}/hide', [ModerationController::class, 'hideComment']);
-    Route::post('/moderate/comment/{id}/delete', [ModerationController::class, 'deleteComment']);
 
     // Auth user info
     Route::get('/user', fn(Request $request) => $request->user());
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/mark-read', [NotificationController::class, 'markAsRead']);
+Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
@@ -74,4 +67,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/user/{id}/adjust-score', [AdminController::class, 'adjustTrustScore']);
     Route::get('/admin/flagged-posts', [AdminController::class, 'getFlaggedPosts']);
     Route::post('/moderate/{type}/{id}/{action}', [ModerationController::class, 'moderateContent']);
+    Route::get('/admin/content', [AdminController::class, 'getContent']);
 });

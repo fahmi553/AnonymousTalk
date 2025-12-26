@@ -41,7 +41,7 @@ class Post extends Model
 
     public function reports()
     {
-        return $this->hasMany(Report::class, 'reported_post_id');
+        return $this->morphMany(Report::class, 'reportable');
     }
 
     public function sentimentLogs()

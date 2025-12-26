@@ -38,6 +38,7 @@ const toggleLike = async () => {
     count.value = res.data.likes_count
     props.post.likes_count = count.value
     props.post.liked = liked.value
+    window.dispatchEvent(new Event('notification-update-needed'));
   } catch (err) {
     if (err.response && (err.response.status === 401 || err.response.status === 419)) {
       window.location.href = '/login'

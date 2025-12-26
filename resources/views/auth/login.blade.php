@@ -16,10 +16,23 @@
                     <h3 class="fw-bold text-body-emphasis">Login to your Account</h3>
                     <p class="text-body-secondary">Welcome back! Please enter your details.</p>
                 </div>
+                @if (session('error'))
+                    <div class="alert alert-danger py-2" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {{ session('error') }}
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div class="alert alert-danger py-2" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        {{ $errors->first() }}
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                @foreach ($errors->all() as $error)
+                                    <div class="small">{{ $error }}</div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 @endif
                 <form method="POST" action="{{ route('login') }}">

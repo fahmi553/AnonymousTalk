@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-4">
-    <h2 class="mb-4 fw-bold text-body-emphasis">Admin Dashboard</h2>
+    <h2 class="mb-4 fw-bold text-body-emphasis">Admin Reports Dashboard</h2>
 
     <AdminStats />
 
@@ -301,7 +301,9 @@ const timeAgo = (dateParam) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const res = await axios.get('/api/admin/dashboard');
+    const timestamp = new Date().getTime();
+    const res = await axios.get(`/api/admin/dashboard?t=${timestamp}`);
+
     stats.value = res.data.stats;
     userReports.value = res.data.userReports;
     sentimentReports.value = res.data.sentimentReports;

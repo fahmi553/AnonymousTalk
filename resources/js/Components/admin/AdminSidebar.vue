@@ -4,33 +4,41 @@
       <h6 class="fw-bold mb-0 text-body-emphasis">Management</h6>
     </div>
     <div class="list-group list-group-flush">
-      
-      <router-link 
-        to="/admin/dashboard?tab=user" 
+
+      <router-link
+        to="/admin/content"
+        class="list-group-item list-group-item-action"
+        active-class="active"
+      >
+          <i class="fas fa-layer-group me-2"></i> Content Manager
+      </router-link>
+
+      <router-link
+        to="/admin/dashboard?tab=user"
         class="list-group-item list-group-item-action"
         :class="{ 'active': isDashboard && currentTab === 'user' }"
       >
         <i class="fas fa-inbox me-2"></i> Pending User Reports
       </router-link>
 
-      <router-link 
-        to="/admin/dashboard?tab=sentiment" 
+      <router-link
+        to="/admin/dashboard?tab=sentiment"
         class="list-group-item list-group-item-action"
         :class="{ 'active': isDashboard && currentTab === 'sentiment' }"
       >
         <i class="fas fa-robot me-2"></i> Flagged Content
       </router-link>
 
-      <router-link 
-        to="/admin/users" 
+      <router-link
+        to="/admin/users"
         class="list-group-item list-group-item-action"
         active-class="active"
       >
         <i class="fas fa-shield-alt me-2"></i> User Trust Scores
       </router-link>
-      
-      <router-link 
-        to="/admin/logs" 
+
+      <router-link
+        to="/admin/logs"
         class="list-group-item list-group-item-action"
         active-class="active"
       >

@@ -17,6 +17,7 @@ class ReportController extends Controller
             'type' => 'required|in:user,post,comment',
             'target_id' => 'required|integer',
             'reason' => 'required|string|max:255',
+            'details' => 'nullable|string|max:1000',
         ]);
 
         $modelMap = [
@@ -32,11 +33,10 @@ class ReportController extends Controller
         $report = new Report();
         $report->reporter_id = Auth::id();
         $report->reason = $request->reason;
+        $report->details = $request->details ?? $request->reason;
         $report->reportable_type = $modelMap[$request->type];
         $report->reportable_id = $request->target_id;
-
         $report->status = 'pending';
-
         $report->save();
 
         return response()->json(['message' => 'Report submitted successfully!']);
@@ -46,6 +46,7 @@ class ReportController extends Controller
     {
         $validated = $request->validate([
             'reason' => 'required|string|max:1000',
+            'details' => 'nullable|string|max:1000'
         ]);
 
         $report = Report::create([
@@ -53,6 +54,7 @@ class ReportController extends Controller
             'reportable_id' => $user->user_id,
             'reportable_type' => User::class,
             'reason' => $validated['reason'],
+            'details' => $validated['details'] ?? null,
             'status' => 'pending',
         ]);
 

@@ -9,6 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\Badge;
 use App\Models\TrustScoreLog;
 use Illuminate\Support\Facades\Log;
+use App\Notifications\BadgeEarnedNotification;
 
 class User extends Authenticatable
 {
@@ -55,9 +56,14 @@ class User extends Authenticatable
         return $this->hasMany(Comment::class, 'user_id');
     }
 
-    public function reports()
+    public function reportsFiled()
     {
         return $this->hasMany(Report::class, 'reporter_id');
+    }
+
+    public function reports()
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 
     public function trustScoreLogs()
@@ -135,19 +141,42 @@ class User extends Authenticatable
 
     public function updateBadges()
     {
-        Log::info('Starting badge recalculation', [
-            'user_id' => $this->user_id,
-            'trust_score' => $this->trust_score,
-        ]);
+        $previousTrustBadges = $this->badges()->where('trust_threshold', '>', 0)->get();
+        $previousMaxThreshold = $previousTrustBadges->max('trust_threshold') ?? 0;
 
-        $allBadges = Badge::all();
-        $userBadgeIds = $this->badges()->pluck('user_badges.badge_id')->toArray();
+        $beforeBadgeIds = $this->badges()->pluck('user_badges.badge_id')->toArray();
 
+        $allBadges = \App\Models\Badge::all();
         $trustBadges = $allBadges->where('trust_threshold', '>', 0);
         $behaviorBadges = $allBadges->where('trust_threshold', 0);
 
+        $negativeBadgeNames = ['Toxic', 'Under Review', 'Warned', 'Banned'];
+
         $this->updateTrustBadges($trustBadges);
-        $this->updateBehaviorBadges($behaviorBadges, $userBadgeIds);
+        $this->updateBehaviorBadges($behaviorBadges, $beforeBadgeIds);
+
+        $this->load('badges');
+        $afterBadges = $this->badges;
+
+        foreach ($afterBadges as $badge) {
+            if (!in_array($badge->badge_id, $beforeBadgeIds)) {
+
+                $notificationType = 'achievement';
+
+                if (in_array($badge->badge_name, $negativeBadgeNames) || str_contains(strtolower($badge->badge_name), 'toxic')) {
+                    $notificationType = 'negative';
+                }
+                elseif ($badge->trust_threshold > 0) {
+                    if ($badge->trust_threshold > $previousMaxThreshold) {
+                        $notificationType = 'promotion';
+                    } elseif ($badge->trust_threshold < $previousMaxThreshold) {
+                        $notificationType = 'demotion';
+                    }
+                }
+
+                $this->notify(new \App\Notifications\BadgeEarnedNotification($badge->badge_name, $notificationType));
+            }
+        }
     }
 
     private function updateTrustBadges($trustBadges)
@@ -230,7 +259,11 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute()
     {
-        $avatar = $this->avatar ?? 'default.png';
+        $avatar = $this->avatar ?? 'default.jpg';
+
+        if (str_starts_with($avatar, 'http')) {
+            return $avatar;
+        }
         return asset("images/avatars/{$avatar}");
     }
 

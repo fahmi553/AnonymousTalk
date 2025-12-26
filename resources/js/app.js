@@ -13,9 +13,7 @@ import PostDetail from './Components/anonymous/PostDetail.vue'
 import LikeButton from './Components/anonymous/LikeButton.vue'
 import ProfileView from './Components/anonymous/ProfileView.vue'
 import ProfileEdit from './Components/anonymous/ProfileEdit.vue'
-// import Header from './Components/anonymous/Header.vue'
 import NotFound from './Components/anonymous/NotFound.vue'
-// import ThemeToggle from "./Components/anonymous/ThemeToggle.vue"
 import AdminLogin from './Components/admin/AdminLogin.vue'
 import AdminDashboard from './Components/admin/AdminDashboard.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
@@ -30,6 +28,9 @@ import TermsOfService from './Components/pages/TermsOfService.vue';
 import PrivacyPolicy from './Components/pages/PrivacyPolicy.vue';
 import CommunityGuidelines from './Components/pages/CommunityGuidelines.vue';
 import HelpCenter from './Components/pages/HelpCenter.vue';
+import DiscussionFeed from './Components/pages/DiscussionFeed.vue'
+import CookiePolicy from './Components/pages/CookiePolicy.vue';
+import AdminContent from './Components/admin/AdminContent.vue';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -42,12 +43,15 @@ const routes = [
   { path: '/admin/dashboard', component: AdminDashboard, name: 'AdminDashboard'},
   { path: '/admin/report/:id', component: AdminReportDetail, name: 'AdminReportDetail'},
   { path: '/admin/report/user/:id', component: ReportUserDetails, name: 'ReportUserDetails'},
-  { path: '/admin/users', component: UserList, name: 'AdminUserList', eta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/users', component: UserList, name: 'AdminUserList', meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/logs', component: SystemLogs, name: 'SystemLogs', meta: { requiresAuth: true, requiresAdmin: true }},
   { path: '/terms', component: TermsOfService, name: 'Terms' },
   { path: '/privacy', component: PrivacyPolicy, name: 'Privacy' },
   { path: '/community-guidelines', component: CommunityGuidelines, name: 'CommunityGuidelines' },
   { path: '/help', component: HelpCenter, name: 'HelpCenter' },
+  { path: '/cookies', component: CookiePolicy, name: 'CookiePolicy' },
+  { path: '/feed', component: DiscussionFeed, name: 'DiscussionFeed' },
+  { path: '/admin/content', component: AdminContent, name: 'AdminContent', meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
@@ -62,6 +66,37 @@ const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('c
 if (token) {
   axios.defaults.headers.common['X-CSRF-TOKEN'] = token
 }
+
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (window.location.pathname === '/login' || window.location.pathname === '/admin/login') {
+            return Promise.reject(error);
+        }
+
+        if (error.response) {
+            const status = error.response.status;
+            const originalRequest = error.config;
+
+            if (status === 419) {
+                window.location.href = '/login';
+                return Promise.reject(error);
+            }
+
+            if (status === 401) {
+                if (originalRequest.url.includes('/user') || originalRequest.url.includes('/api/user')) {
+                    return Promise.reject(error);
+                }
+
+                window.location.href = '/login';
+            }
+
+            if (status === 403) {
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 const app = createApp({})
 app.use(router)

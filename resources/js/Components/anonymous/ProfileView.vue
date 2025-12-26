@@ -31,13 +31,14 @@
 
           <div class="position-relative me-md-4 mb-3 mb-md-0">
             <img
-              :src="user.avatar ? `/images/avatars/${user.avatar}` : '/images/avatars/default.jpg'"
-              alt="Avatar"
-              class="rounded-circle border border-4 border-body shadow bg-body"
-              width="150"
-              height="150"
-              style="object-fit: cover;"
-            />
+  :src="user.avatar_url"
+  @error="$event.target.src = '/images/avatars/default.jpg'"
+  alt="Avatar"
+  class="rounded-circle border border-4 border-body shadow bg-body"
+  width="150"
+  height="150"
+  style="object-fit: cover;"
+/>
           </div>
 
           <div class="text-center text-md-start mb-2 flex-grow-1">

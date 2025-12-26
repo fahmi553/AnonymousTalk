@@ -50,7 +50,7 @@
                 <td colspan="5" class="text-center py-4 text-muted">No users found.</td>
               </tr>
 
-              <tr v-for="user in users.data" :key="user.user_id">
+              <tr v-for="user in users.data" :key="user.user_id" :class="{ 'bg-danger-subtle': user.banned_at }">
                 <td class="ps-4 text-muted">#{{ user.user_id }}</td>
 
                 <td>
@@ -59,22 +59,36 @@
                       <span class="fw-bold text-secondary">{{ user.username.charAt(0).toUpperCase() }}</span>
                     </div>
                     <div>
-                      <p class="mb-0 fw-semibold">{{ user.username }}</p>
+                      <div class="d-flex align-items-center gap-2">
+                        <p class="mb-0 fw-semibold">{{ user.username }}</p>
+                        <span v-if="user.banned_at" class="badge bg-danger" style="font-size: 0.65rem;">
+                          <i class="fas fa-ban me-1"></i> BANNED
+                        </span>
+                      </div>
                       <small class="text-muted">{{ user.email }}</small>
                     </div>
                   </div>
                 </td>
 
-                <td class="text-center">
-                  <div v-if="user.badges && user.badges.length > 0">
-                    <span
+                <td class="text-center" style="max-width: 300px;">
+                  <div v-if="user.badges && user.badges.length > 0" class="d-flex justify-content-center flex-wrap gap-2">
+                    <div
                       v-for="badge in user.badges"
-                      :key="badge.id"
-                      class="badge rounded-pill text-bg-info me-1"
+                      :key="badge.badge_id || badge.id"
+                      class="badge rounded-pill border border-secondary-subtle bg-body-tertiary text-body-emphasis d-inline-flex align-items-center p-1 pe-3"
+                      data-bs-toggle="tooltip"
                       :title="badge.description"
                     >
-                      <i class="fas fa-shield-alt me-1"></i> {{ badge.badge_name }}
-                    </span>
+                      <img
+                        v-if="badge.icon_url"
+                        :src="badge.icon_url"
+                        :alt="badge.badge_name"
+                        width="20"
+                        height="20"
+                        class="me-2"
+                      />
+                      <span class="fw-medium">{{ badge.badge_name }}</span>
+                    </div>
                   </div>
                   <span v-else class="text-muted small">-</span>
                 </td>
@@ -125,14 +139,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import axios from 'axios';
-import { debounce } from 'lodash';
 import AdminStats from './AdminStats.vue';
 
 const users = ref({ data: [], links: {}, meta: {} });
 const loading = ref(false);
 const searchQuery = ref('');
+
+const initTooltips = () => {
+  nextTick(() => {
+    if (window.bootstrap) {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltipTriggerList.forEach(el => {
+        const oldTooltip = window.bootstrap.Tooltip.getInstance(el);
+        if (oldTooltip) oldTooltip.dispose();
+        new window.bootstrap.Tooltip(el);
+      });
+    }
+  });
+};
 
 const fetchUsers = async (url = '/api/admin/users') => {
   loading.value = true;
@@ -140,6 +166,8 @@ const fetchUsers = async (url = '/api/admin/users') => {
     const params = { search: searchQuery.value };
     const res = await axios.get(url, { params });
     users.value = res.data;
+
+    initTooltips();
   } catch (err) {
     console.error("Failed to fetch users", err);
   } finally {
@@ -150,6 +178,7 @@ const fetchUsers = async (url = '/api/admin/users') => {
 const changePage = (url) => {
   if (url) fetchUsers(url);
 };
+
 let timeout = null;
 watch(searchQuery, (newVal) => {
   clearTimeout(timeout);

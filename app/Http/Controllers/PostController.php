@@ -69,7 +69,7 @@ class PostController extends Controller
             'created_at'    => $post->created_at->toISOString(),
             'user'          => [
                 'username' => $post->user->username ?? 'Anonymous',
-                'avatar'   => $post->user->avatar ?? 'default.jpg', // <--- ADD THIS
+                'avatar'   => $post->user->avatar ?? 'default.jpg',
             ],
             'category'      => $post->categoryModel?->name,
             'comments'      => $post->comments->map(fn($c) => $this->formatComment($c)),
@@ -96,6 +96,14 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->can_post) {
+            return response()->json([
+                'message' => 'Your trust score is too low to create posts.',
+                'status' => 'error'
+            ], 403);
+        }
+
         $request->validate([
             'title'       => 'nullable|string|max:255',
             'content'     => 'required|string',

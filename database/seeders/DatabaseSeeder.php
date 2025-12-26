@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             ReportSeeder::class,
             TrustScoreLogSeeder::class,
             BadgeSeeder::class,
+            AvatarSeeder::class,
         ]);
 
         \App\Models\User::all()->each->updateBadges();
