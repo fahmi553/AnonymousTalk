@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/avatars', [ProfileController::class, 'getAvatars']);
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::delete('/profile', [ProfileController::class, 'destroy']);
     Route::post('/profile/regenerate-username', [ProfileController::class, 'regenerateUsername']);
     Route::patch('/posts/{id}/toggle-profile-visibility', [ProfileController::class, 'togglePostVisibility']);
     Route::post('/profile/toggle-hide-all-posts', [ProfileController::class, 'toggleHideAllPosts']);

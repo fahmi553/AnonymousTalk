@@ -37,7 +37,7 @@ class GoogleController extends Controller
                     'google_id' => $googleUser->getId(),
                     'avatar' => '/images/default-avatar.png',
                     'password' => Hash::make(Str::random(16)),
-                    'trust_score' => 10,
+                    'trust_score' => 0,
                 ]);
             } else {
                 if (!$user->google_id) {

@@ -282,4 +282,25 @@ class ProfileController extends Controller
             'path' => asset('images/avatars/') . '/'
         ]);
     }
+    
+    public function destroy(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user->posts()->delete();        
+        $user->comments()->delete();
+        $user->trustScoreLogs()->delete();
+        $user->badges()->detach();
+        $user->reportsFiled()->delete();
+        $user->delete();
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Your account and all associated content have been permanently deleted.',
+        ]);
+    }
 }

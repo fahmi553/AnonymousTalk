@@ -52,7 +52,6 @@ class TrustScoreLogSeeder extends Seeder
                 'action_type' => $actionType,
                 'score_change' => $data['score'],
                 'reason' => Arr::random($data['reasons']),
-                'timestamp' => $randomDate, 
                 'created_at' => $randomDate,
                 'updated_at' => $randomDate,
             ]);

@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('action_type');
             $table->integer('score_change');
             $table->text('reason')->nullable();
-            $table->timestamp('timestamp');
             $table->timestamps();
 
             $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
