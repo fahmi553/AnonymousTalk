@@ -268,12 +268,22 @@ const getConfidenceColor = (details) => {
     return 'bg-info';
 };
 
-const getSeverityLabel = (reason) => {
-    const r = (reason || '').toLowerCase();
-    if (r.includes('hate') || r.includes('threat') || r.includes('suicide') || r.includes('harm') || r.includes('sexual')) return 'High';
-    if (r.includes('spam') || r.includes('ad') || r.includes('bot')) return 'Low';
-    return 'Medium';
+const severityMap = {
+  'Hate Speech or Discrimination': 'High',
+  'Threats or Intimidation': 'High',
+  'Harassment or Bullying': 'High',
+  'Inappropriate or Explicit Content': 'High',
+  'Trolling or Provocation': 'Medium',
+  'Misinformation or False Claims': 'Medium',
+  'Abuse of Anonymity': 'Medium',
+  'Spam or Advertising': 'Low',
+  'Other': 'Low'
 };
+
+const getSeverityLabel = (reason) => {
+  return severityMap[reason] || 'Medium';
+};
+
 
 const getSeverityBadge = (reason) => {
     const label = getSeverityLabel(reason);

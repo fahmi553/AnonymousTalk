@@ -18,6 +18,13 @@
                     <p class="text-body-secondary">Welcome back! Please enter your details.</p>
                 </div>
 
+                @if (session('status'))
+                    <div class="alert alert-success py-2" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 @if (session('error'))
                     <div class="alert alert-danger py-2" role="alert">
                         <i class="fas fa-exclamation-circle me-2"></i>
@@ -70,6 +77,10 @@
                                 required
                                 placeholder="Enter your password"
                             >
+                            {{-- NEW: Password Visibility Toggle --}}
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -108,4 +119,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('togglePassword').addEventListener('click', function (e) {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+</script>
 @endsection

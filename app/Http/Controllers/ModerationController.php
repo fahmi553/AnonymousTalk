@@ -19,18 +19,15 @@ class ModerationController extends Controller
 
     public function moderateContent($type, $id, $action)
     {
-        // 1. Check Permissions
         if (!$this->isAdmin()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // 2. Identify Content Type
         $model = null;
         $possibleMorphTypes = [];
 
         if ($type === 'post') {
             $model = Post::findOrFail($id);
-            // These are the variations Laravel might use in the database
             $possibleMorphTypes = [Post::class, 'App\Models\Post', 'posts'];
         } elseif ($type === 'comment') {
             $model = Comment::findOrFail($id);
@@ -39,7 +36,6 @@ class ModerationController extends Controller
             return response()->json(['error' => 'Invalid content type'], 400);
         }
 
-        // 3. Update Status
         switch ($action) {
             case 'approve':
                 $model->status = 'published';
@@ -55,14 +51,11 @@ class ModerationController extends Controller
         }
         $model->save();
 
-        // 4. Close Related Reports (The most important part!)
-        // This query finds ANY report pointing to this item and marks it resolved.
         $updatedCount = Report::where('reportable_id', $id)
             ->whereIn('reportable_type', $possibleMorphTypes)
             ->where('status', 'pending')
             ->update(['status' => 'resolved']);
 
-        // 5. Log for debugging
         Log::info("Moderation: {$action} on {$type} #{$id}. Closed {$updatedCount} reports.");
 
         return response()->json([

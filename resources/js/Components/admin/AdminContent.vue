@@ -1,12 +1,10 @@
 <template>
   <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="fw-bold text-body-emphasis">Content Manager Report</h2>
-      <p class="text-muted">
-        Administrative report showing flagged posts and comments, moderation status,
-        and user-generated reports for review and action.
-      </p>
-
+      <h2 class="fw-bold text-body-emphasis">Content Manager</h2>
+      <!-- <p class="text-muted">
+        Review, approve, or reject user posts and comments.
+      </p> -->
     </div>
 
     <div class="card bg-body shadow-sm border-0 rounded-lg mb-4">
@@ -31,7 +29,7 @@
             style="max-width: 200px;"
         >
             <option value="all">All Statuses</option>
-            <option value="published">Visible (Published)</option>
+            <option value="pending">Pending Approval</option> <option value="published">Visible (Published)</option>
             <option value="moderated">Hidden (Moderated)</option>
             <option value="deleted">Deleted</option>
         </select>
@@ -84,6 +82,7 @@
                     :class="{
                         'text-bg-success': item.status === 'published',
                         'text-bg-warning': item.status === 'moderated',
+                        'text-bg-info': item.status === 'pending',
                         'text-bg-danger': item.status === 'deleted'
                     }"
                 >
@@ -114,10 +113,28 @@
               </td>
 
               <td class="text-end pe-4">
+
+                 <div v-if="item.status === 'pending'" class="btn-group me-2">
+                    <button
+                        class="btn btn-sm btn-success"
+                        @click="openModal(item, 'approve')"
+                        title="Approve & Publish"
+                    >
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button
+                        class="btn btn-sm btn-danger"
+                        @click="openModal(item, 'reject')"
+                        title="Reject & Delete"
+                    >
+                        <i class="fas fa-times"></i>
+                    </button>
+                 </div>
+
                  <button
                     v-if="item.status === 'moderated' || item.status === 'deleted'"
                     class="btn btn-sm btn-success me-2"
-                    @click="updateStatus(item, 'approve')"
+                    @click="openModal(item, 'approve')"
                     title="Unhide / Publish"
                  >
                     <i class="fas fa-check"></i> Unhide
@@ -126,7 +143,7 @@
                  <button
                     v-if="item.status === 'published'"
                     class="btn btn-sm btn-warning text-dark me-2"
-                    @click="updateStatus(item, 'hide')"
+                    @click="openModal(item, 'hide')"
                     title="Hide from public"
                  >
                     <i class="fas fa-eye-slash"></i> Hide
@@ -157,6 +174,49 @@
          </nav>
       </div>
     </div>
+
+    <div v-if="showModal" class="modal-backdrop fade show"></div>
+    <div v-if="showModal" class="modal fade show d-block" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold">Confirm Action</h5>
+            <button type="button" class="btn-close" @click="closeModal"></button>
+          </div>
+          <div class="modal-body">
+            <p>
+                Are you sure you want to
+                <span class="fw-bold text-uppercase" :class="getActionColor(modalAction)">{{ modalAction }}</span>
+                this {{ activeType === 'posts' ? 'post' : 'comment' }}?
+            </p>
+            <div class="alert alert-light border" role="alert">
+                <small class="text-muted d-block">Content Preview:</small>
+                <em>"{{ modalItem?.title || modalItem?.content?.substring(0, 50) }}..."</em>
+            </div>
+            <p v-if="modalAction === 'approve'" class="text-success small mb-0">
+                <i class="fas fa-info-circle"></i> This will publish the content and reward the user.
+            </p>
+            <p v-if="modalAction === 'reject'" class="text-danger small mb-0">
+                <i class="fas fa-exclamation-triangle"></i> This will delete the content permanently.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
+            <button
+                type="button"
+                class="btn"
+                :class="getActionButtonClass(modalAction)"
+                @click="confirmAction"
+                :disabled="processing"
+            >
+                <span v-if="processing" class="spinner-border spinner-border-sm me-1"></span>
+                Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -167,11 +227,15 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const loading = ref(false);
+const processing = ref(false);
 const items = ref({ data: [], current_page: 1, last_page: 1 });
 
 const activeType = ref('posts');
 const filterStatus = ref('all');
 const search = ref('');
+const showModal = ref(false);
+const modalItem = ref(null);
+const modalAction = ref('');
 
 const getId = (item) => item.post_id || item.comment_id;
 
@@ -194,19 +258,50 @@ const fetchContent = async (page = 1) => {
     }
 };
 
-const updateStatus = async (item, action) => {
-    if (!confirm(`Are you sure you want to ${action} this item?`)) return;
+const openModal = (item, action) => {
+    modalItem.value = item;
+    modalAction.value = action;
+    showModal.value = true;
+};
 
+const closeModal = () => {
+    showModal.value = false;
+    modalItem.value = null;
+    modalAction.value = '';
+};
+
+const confirmAction = async () => {
+    if (!modalItem.value || !modalAction.value) return;
+
+    processing.value = true;
     try {
         const typeSingular = activeType.value === 'posts' ? 'post' : 'comment';
-        const id = getId(item);
+        const id = getId(modalItem.value);
 
-        await axios.post(`/api/moderate/${typeSingular}/${id}/${action}`);
+        await axios.post(`/api/moderate/${typeSingular}/${id}/${modalAction.value}`);
 
-        fetchContent(items.value.current_page);
+        await fetchContent(items.value.current_page);
+        closeModal();
     } catch (e) {
-        alert("Failed to update status.");
+        alert("Failed to update status. Please check console.");
+        console.error(e);
+    } finally {
+        processing.value = false;
     }
+};
+
+const getActionColor = (action) => {
+    if (action === 'approve') return 'text-success';
+    if (action === 'reject') return 'text-danger';
+    if (action === 'hide') return 'text-warning';
+    return 'text-primary';
+};
+
+const getActionButtonClass = (action) => {
+    if (action === 'approve') return 'btn-success';
+    if (action === 'reject') return 'btn-danger';
+    if (action === 'hide') return 'btn-warning';
+    return 'btn-primary';
 };
 
 const viewDetails = (item) => {
@@ -224,3 +319,14 @@ watch([activeType, filterStatus], () => {
 
 onMounted(() => fetchContent(1));
 </script>
+
+<style scoped>
+.modal-backdrop {
+    z-index: 1040;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal {
+    z-index: 1050;
+    display: block;
+}
+</style>

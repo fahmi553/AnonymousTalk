@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use App\Helpers\UsernameGenerator;
+use Illuminate\Auth\Events\Verified;
 
 class GoogleController extends Controller
 {
@@ -26,7 +27,6 @@ class GoogleController extends Controller
 
             if (!$user) {
                 $newUsername = UsernameGenerator::generate();
-
                 while(User::where('username', $newUsername)->exists()){
                     $newUsername = UsernameGenerator::generate();
                 }
@@ -35,15 +35,33 @@ class GoogleController extends Controller
                     'username' => $newUsername,
                     'email' => $googleUser->getEmail(),
                     'google_id' => $googleUser->getId(),
-                    'avatar' => '/images/default-avatar.png',
+                    'avatar' => 'default.jpg',
                     'password' => Hash::make(Str::random(16)),
                     'trust_score' => 0,
+                    'email_verified_at' => now(),
                 ]);
+
+                event(new Verified($user));
+
             } else {
+                $updates = [];
+                $wasUnverified = false;
+
                 if (!$user->google_id) {
-                    $user->update([
-                        'google_id' => $googleUser->getId(),
-                    ]);
+                    $updates['google_id'] = $googleUser->getId();
+                }
+
+                if (!$user->email_verified_at) {
+                    $updates['email_verified_at'] = now();
+                    $wasUnverified = true;
+                }
+
+                if (!empty($updates)) {
+                    $user->update($updates);
+
+                    if ($wasUnverified) {
+                        event(new Verified($user));
+                    }
                 }
             }
 

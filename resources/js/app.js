@@ -31,6 +31,8 @@ import HelpCenter from './Components/pages/HelpCenter.vue';
 import DiscussionFeed from './Components/pages/DiscussionFeed.vue'
 import CookiePolicy from './Components/pages/CookiePolicy.vue';
 import AdminContent from './Components/admin/AdminContent.vue';
+import ForgotPassword from './Components/auth/ForgotPassword.vue';
+import ResetPassword from './Components/auth/ResetPassword.vue';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -51,6 +53,8 @@ const routes = [
   { path: '/help', component: HelpCenter, name: 'HelpCenter' },
   { path: '/cookies', component: CookiePolicy, name: 'CookiePolicy' },
   { path: '/feed', component: DiscussionFeed, name: 'DiscussionFeed' },
+  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guest: true } },
+  { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { guest: true } },
   { path: '/admin/content', component: AdminContent, name: 'AdminContent', meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]

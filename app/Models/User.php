@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,7 +12,7 @@ use App\Models\TrustScoreLog;
 use Illuminate\Support\Facades\Log;
 use App\Notifications\BadgeEarnedNotification;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -21,6 +22,8 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'google_id',
+        'email_verified_at',
         'trust_score',
         'role',
         'hide_all_posts',
@@ -117,12 +120,8 @@ class User extends Authenticatable
                 'can_post' => false,
                 'can_comment' => false,
             ]);
-        } elseif ($this->trust_score < 30) {
-            $this->update([
-                'can_post' => false,
-                'can_comment' => true,
-            ]);
-        } else {
+        }
+        else {
             $this->update([
                 'can_post' => true,
                 'can_comment' => true,

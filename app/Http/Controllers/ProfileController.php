@@ -10,6 +10,9 @@ use App\Models\User;
 use App\Models\Post;
 use App\Models\Comment;
 use App\Models\Badge;
+use Illuminate\Support\Facades\DB;
+use App\Models\Like;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
@@ -42,6 +45,8 @@ class ProfileController extends Controller
 
         $allBadges = Badge::all();
         $profileUserArray = $profileUser->toArray();
+        $profileUserArray['is_google_user'] = !empty($profileUser->google_id);
+        $profileUserArray['is_verified'] = !is_null($profileUser->email_verified_at);
 
         $trustBadges = $allBadges
             ->whereNotNull('trust_threshold')
@@ -282,25 +287,40 @@ class ProfileController extends Controller
             'path' => asset('images/avatars/') . '/'
         ]);
     }
-    
+
     public function destroy(Request $request)
     {
         $user = $request->user();
 
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
+        $isGoogleUser = !empty($user->google_id);
 
-        $user->posts()->delete();        
-        $user->comments()->delete();
-        $user->trustScoreLogs()->delete();
-        $user->badges()->detach();
-        $user->reportsFiled()->delete();
-        $user->delete();
-        $user->tokens()->delete();
+        if (!$isGoogleUser) {
+            $request->validate([
+                'password' => ['required', 'current_password'],
+            ]);
+        }
 
-        return response()->json([
-            'message' => 'Your account and all associated content have been permanently deleted.',
-        ]);
+        try {
+            DB::transaction(function () use ($user) {
+                $user->posts()->delete();
+                $user->comments()->delete();
+
+                DB::table('likes')->where('user_id', $user->user_id)->delete();
+
+                DB::table('notifications')->where('notifiable_id', $user->user_id)->delete();
+
+                $user->trustScoreLogs()->delete();
+                $user->badges()->detach();
+                $user->reportsFiled()->delete();
+                $user->delete();
+                $user->tokens()->delete();
+            });
+
+            return response()->json(['message' => 'Account deleted successfully.']);
+
+        } catch (\Exception $e) {
+            Log::error('Delete Account Failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Database Error: ' . $e->getMessage()], 500);
+        }
     }
 }

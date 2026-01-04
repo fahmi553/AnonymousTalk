@@ -13,70 +13,98 @@ class CommentSeeder extends Seeder
     public function run()
     {
         $posts = Post::all();
-        $users = User::all();
+        $users = User::where('role', 'user')->get();
 
-        $sampleComments = [
-            "I completely agree with you!",
-            "That’s a great point, thanks for sharing.",
-            "I’ve experienced something similar before.",
-            "This is really helpful, appreciate it!",
-            "Interesting perspective, I never thought of it that way.",
-            "Could you share more details about that?",
-            "I think it depends on the situation.",
-            "Yes, I can relate to this so much.",
-            "Thanks for posting this, it made my day.",
-            "Haha, that’s so true!",
-            "I think your post touches on something that many people are experiencing nowadays. Personally, I’ve gone through something very similar and what helped me was breaking things down into smaller, more manageable tasks instead of trying to do everything at once.",
-            "This is such an insightful perspective. I’ve always struggled with finding balance in situations like this, but reading your comment made me realize there are other approaches I haven’t tried yet. Thanks a lot for sharing your experience in such detail.",
-            "Honestly, this is one of the most relatable posts I’ve seen in a while. It reminded me of a time when I faced the same challenge and the only thing that helped was reaching out to friends and talking it through."
-        ];
-
-        if ($users->isEmpty() || $posts->isEmpty()) {
-            $this->command->warn('No users or posts found. Seed users and posts first.');
+        if ($posts->isEmpty() || $users->isEmpty()) {
+            $this->command->warn('No posts or users found. Seed users and posts first.');
             return;
         }
 
+        $commentPool = collect([
+            "I really relate to this. It’s something I’ve struggled with too, and seeing others talk about it helps a lot.",
+            "This is a thoughtful post. I think many people underestimate how common this experience actually is.",
+            "I went through something similar last year, and what helped most was taking things one step at a time.",
+            "You explained this really clearly. It made me rethink how I approach similar situations.",
+            "I don’t fully agree, but I appreciate how respectfully you presented your point.",
+            "This is a topic that doesn’t get discussed enough. Thanks for bringing it up.",
+            "I’ve had mixed experiences with this, so it’s interesting to hear a different perspective.",
+            "Reading this made me pause and reflect on my own habits.",
+            "I think the key issue here is balance. Too much of either side can cause problems.",
+            "This resonates a lot with what I’m dealing with right now."
+        ]);
+
+        $replyPool = collect([
+            "That’s a really good point.",
+            "I agree with you on this.",
+            "I hadn’t thought about it that way before.",
+            "That makes a lot of sense.",
+            "Thanks for explaining further.",
+            "I see where you’re coming from.",
+            "That’s an interesting way to look at it."
+        ]);
+
         foreach ($posts as $post) {
-            $commentCount = rand(2, 5);
 
-            for ($i = 0; $i < $commentCount; $i++) {
-                $randomTime = Carbon::now()->subDays(rand(1, 90))->subHours(rand(0, 23))->subMinutes(rand(0, 59));
+            $baseComments = rand(2, 4);
 
-                $topComment = Comment::create([
+            for ($i = 0; $i < $baseComments; $i++) {
+
+                if ($commentPool->isEmpty()) {
+                    break;
+                }
+
+                $user = $this->pickUserByTrust($users);
+
+                $createdAt = Carbon::parse($post->created_at)
+                    ->addMinutes(rand(10, 1440));
+
+                $comment = Comment::create([
                     'post_id' => $post->post_id,
-                    'user_id' => $users->random()->user_id,
-                    'content' => $sampleComments[array_rand($sampleComments)],
+                    'user_id' => $user->user_id,
+                    'content' => $commentPool->shift(),
                     'parent_id' => null,
-                    'created_at' => $randomTime,
-                    'updated_at' => $randomTime->copy()->addMinutes(rand(5, 500)),
+                    'created_at' => $createdAt,
+                    'updated_at' => $createdAt->copy()->addMinutes(rand(1, 120)),
                 ]);
 
-                $this->createReplies($topComment, $users, $post, $sampleComments, 0);
+                $this->seedReplies($comment, $users, $replyPool);
             }
+        }
+
+        $this->command->info('Comments seeded with realistic, unique discussion threads.');
+    }
+
+    private function seedReplies(Comment $parent, $users, $replyPool)
+    {
+        if ($replyPool->isEmpty()) return;
+
+        $replyCount = rand(0, 2);
+
+        for ($i = 0; $i < $replyCount; $i++) {
+
+            if ($replyPool->isEmpty()) break;
+
+            $user = $this->pickUserByTrust($users);
+
+            $createdAt = Carbon::parse($parent->created_at)
+                ->addMinutes(rand(5, 180));
+
+            Comment::create([
+                'post_id' => $parent->post_id,
+                'user_id' => $user->user_id,
+                'content' => $replyPool->shift(),
+                'parent_id' => $parent->comment_id,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt->copy()->addMinutes(rand(1, 60)),
+            ]);
         }
     }
 
-    private function createReplies($comment, $users, $post, $sampleComments, $depth)
+    private function pickUserByTrust($users)
     {
-        if ($depth >= 3) {
-            return;
-        }
-
-        $replyCount = rand(0, 3);
-
-        for ($i = 0; $i < $replyCount; $i++) {
-            $randomTime = Carbon::parse($comment->created_at)->addMinutes(rand(1, 1440));
-
-            $reply = Comment::create([
-                'post_id' => $post->post_id,
-                'user_id' => $users->random()->user_id,
-                'content' => $sampleComments[array_rand($sampleComments)],
-                'parent_id' => $comment->comment_id,
-                'created_at' => $randomTime,
-                'updated_at' => $randomTime->copy()->addMinutes(rand(1, 200)),
-            ]);
-
-            $this->createReplies($reply, $users, $post, $sampleComments, $depth + 1);
-        }
+        return $users
+            ->sortByDesc('trust_score')
+            ->take(rand(3, $users->count()))
+            ->random();
     }
 }

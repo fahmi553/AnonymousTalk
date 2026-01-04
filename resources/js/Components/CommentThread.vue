@@ -1,12 +1,26 @@
 <template>
-  <div class="d-flex mb-3">
+  <div class="d-flex mb-3 position-relative">
+    <Teleport to="body">
+        <div v-if="showToast" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+            <div class="toast align-items-center border-0 shadow-lg show" :class="toastClass" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body fs-6" :class="toastClass.includes('text-dark') ? 'text-dark' : 'text-white'">
+                        <i class="fas me-2" :class="toastClass.includes('bg-warning') ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'"></i>
+                        {{ toastMessage }}
+                    </div>
+                    <button type="button" class="btn-close me-2 m-auto" :class="toastClass.includes('text-dark') ? '' : 'btn-close-white'" @click="showToast = false"></button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
     <div class="me-2 flex-shrink-0">
-    <img
-        :src="comment.user?.avatar ? `/images/avatars/${comment.user.avatar}` : '/images/avatars/default.jpg'"
+      <img
+        :src="comment.user?.avatar ? (comment.user.avatar.startsWith('http') ? comment.user.avatar : `/images/avatars/${comment.user.avatar}`) : '/images/avatars/default.jpg'"
         alt="User Avatar"
         class="rounded-circle border bg-white"
         style="width: 40px; height: 40px; object-fit: cover;"
-    />
+      />
     </div>
 
     <div class="flex-grow-1">
@@ -90,8 +104,16 @@
           class="form-control form-control-sm bg-body mb-1"
           rows="2"
           placeholder="Write a reply..."
+          :disabled="isSubmitting"
         ></textarea>
-        <button class="btn btn-sm btn-primary" @click="submitReply" type="button">
+
+        <button
+            class="btn btn-sm btn-primary"
+            @click="submitReply"
+            type="button"
+            :disabled="isSubmitting || !replyContent.trim()"
+        >
+          <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
           Submit Reply
         </button>
       </div>
@@ -103,7 +125,7 @@
           :comment="reply"
           :auth-user-id="authUserId"
           :time-ago="timeAgo"
-          @reply="propagateReply"
+          @success="$emit('success')"
           @deleted="propagateDeleted"
           @delete-request="requestDelete"
           @report-request="propagateReport"
@@ -115,6 +137,8 @@
 
 <script setup>
 import { ref } from "vue";
+import axios from "axios";
+import { useRoute } from "vue-router";
 
 const props = defineProps({
   comment: { type: Object, required: true },
@@ -122,27 +146,80 @@ const props = defineProps({
   timeAgo: { type: Function, required: true },
 });
 
-const emit = defineEmits(["reply", "deleted", "delete-request", "report-request"]);
+const emit = defineEmits(["success", "deleted", "delete-request", "report-request"]);
+const route = useRoute();
 
 const showReplyForm = ref(false);
 const replyContent = ref("");
+const isSubmitting = ref(false);
+const showToast = ref(false);
+const toastMessage = ref("");
+const toastClass = ref("");
 
-const submitReply = () => {
+const submitReply = async () => {
   if (!replyContent.value.trim()) return;
-  emit("reply", {
-    parent_id: props.comment.comment_id,
-    content: `@${props.comment.user?.username || ""} ${replyContent.value.trim()}`,
-  });
-  replyContent.value = "";
-  showReplyForm.value = false;
+
+  isSubmitting.value = true;
+  showToast.value = false;
+
+  const postId = props.comment.post_id || route.params.id;
+
+  try {
+    const res = await axios.post("/api/comments", {
+      post_id: postId,
+      user_id: props.authUserId,
+      content: `@${props.comment.user?.username || "Anonymous"} ${replyContent.value.trim()}`,
+      parent_id: props.comment.comment_id,
+    });
+
+    if (res.data.status === 'warning' || res.data.is_flagged) {
+        triggerToast(res.data.message, 'bg-warning text-dark');
+        if (res.data.is_flagged) replyContent.value = "";
+        return;
+    }
+
+    emit("success");
+    replyContent.value = "";
+    showReplyForm.value = false;
+
+  } catch (e) {
+    if (e.response) {
+        const status = e.response.status;
+        const data = e.response.data;
+
+        if (status === 403 && (data.message === 'Your email address is not verified.' || data.message.includes('verify'))) {
+            triggerToast("Please verify your email address to reply.", "bg-warning text-dark");
+        }
+        else if (status === 403 && data.banned) {
+            triggerToast(data.message, "bg-danger text-white");
+            setTimeout(() => window.location.href = '/login', 2000);
+        }
+        else if (data.is_flagged) {
+            triggerToast(data.message, 'bg-warning text-dark');
+            replyContent.value = "";
+        }
+        else {
+            triggerToast(data.message || "Failed to reply.", "bg-danger text-white");
+        }
+    } else {
+        triggerToast("Network error. Please try again.", "bg-danger text-white");
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const triggerToast = (msg, cssClass) => {
+  toastMessage.value = msg;
+  toastClass.value = cssClass;
+  showToast.value = true;
+  setTimeout(() => showToast.value = false, 4000);
 };
 
 const requestDelete = (id) => emit("delete-request", id);
-const propagateReply = (payload) => emit("reply", payload);
 const propagateDeleted = (id) => emit("deleted", id);
 const stripLeadingMention = (txt) => txt?.replace(/^@\S+\s+/i, "") || "";
 const propagateReport = (targetId, type) => {
   emit('report-request', targetId, type);
 }
-
 </script>

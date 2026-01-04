@@ -327,8 +327,6 @@ const changePage = (page) => {
   fetchPosts(page);
 };
 
-// --- HELPERS ---
-
 const getAvatarUrl = (filename) => {
   if (!filename) return '/images/avatars/default.jpg';
   if (filename.startsWith('http')) return filename;

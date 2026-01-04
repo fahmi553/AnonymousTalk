@@ -14,6 +14,8 @@ use App\Models\Comment;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Auth\GoogleController;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 
 Route::get('/', fn() => view('welcome'));
 

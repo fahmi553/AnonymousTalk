@@ -168,17 +168,34 @@
             <div class="modal-body">
               <div class="mb-3">
                 <label class="form-label fw-bold small text-uppercase text-secondary">Reason</label>
-                <select v-model="reportReasonCategory" class="form-select bg-body-tertiary border-0" :class="{'is-invalid': showReportError && !reportReasonCategory}">
-                  <option disabled value="">Select a reason...</option>
-                  <option value="Spam">Spam</option>
-                  <option value="Hate Speech">Hate Speech</option>
-                  <option value="Harassment">Harassment</option>
-                  <option value="Other">Other</option>
+                <select
+                    v-model="reportReasonCategory"
+                    class="form-select"
+                    :class="{ 'is-invalid': showReportError && !reportReasonCategory }"
+                    >
+                    <option disabled value="">Select a reason...</option>
+                    <option value="Harassment or Bullying">Harassment or Bullying</option>
+                    <option value="Hate Speech or Discrimination">Hate Speech or Discrimination</option>
+                    <option value="Threats or Intimidation">Threats or Intimidation</option>
+                    <option value="Spam or Advertising">Spam or Advertising</option>
+                    <option value="Trolling or Provocation">Trolling or Provocation</option>
+                    <option value="Misinformation">Misinformation or False Claims</option>
+                    <option value="Inappropriate Content">Inappropriate or Explicit Content</option>
+                    <option value="Abuse of Anonymity">Abuse of Anonymity</option>
+                    <option value="Other">Other</option>
                 </select>
+                <div v-if="showReportError && !reportReasonCategory" class="invalid-feedback">
+                    Please select a reason for the report.
+                </div>
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold small text-uppercase text-secondary">Details</label>
-                <textarea v-model="reportDetails" class="form-control bg-body-tertiary border-0" rows="3" placeholder="Optional details..."></textarea>
+                <textarea
+                    v-model="reportDetails"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Optional details..."
+                ></textarea>
               </div>
             </div>
             <div class="modal-footer border-0">

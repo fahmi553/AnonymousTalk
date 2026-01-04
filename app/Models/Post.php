@@ -12,7 +12,9 @@ class Post extends Model
     protected $primaryKey = 'post_id';
     public $incrementing = true;
     protected $keyType = 'int';
-    public const STATUSES = ['published', 'moderated', 'deleted'];
+
+    // ADDED 'pending' HERE
+    public const STATUSES = ['published', 'moderated', 'deleted', 'pending'];
 
     protected $fillable = [
         'user_id',
@@ -22,7 +24,6 @@ class Post extends Model
         'sentiment_score',
         'status',
         'hidden_in_profile',
-        'status',
     ];
 
     protected $casts = [

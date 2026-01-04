@@ -371,4 +371,38 @@ class AdminController extends Controller
                 ->get()
         ]);
     }
+
+    public function moderateContent(Request $request, $type, $id, $action)
+    {
+        $modelClass = $type === 'post' ? Post::class : Comment::class;
+        $content = $modelClass::findOrFail($id);
+
+        switch ($action) {
+            case 'approve':
+                $content->status = 'published';
+                $content->save();
+                if ($type === 'post' && $content->user) {
+                     $content->user->applyTrustChange(2, 'Post Approved by Admin', 'post_approved');
+                }
+                break;
+
+            case 'reject':
+                $content->status = 'deleted';
+                $content->save();
+
+                break;
+
+            case 'hide':
+                $content->status = 'moderated';
+                $content->save();
+                break;
+
+            case 'publish':
+                $content->status = 'published';
+                $content->save();
+                break;
+        }
+
+        return response()->json(['message' => "Content {$action}ed successfully."]);
+    }
 }

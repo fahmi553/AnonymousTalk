@@ -131,6 +131,10 @@ class PostController extends Controller
             \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
         }
 
+        if (!$isToxic && $user->trust_score < 30) {
+           $status = 'pending';
+       }
+
         $post = Post::create([
             'user_id'         => auth()->id(),
             'category_id'     => $request->category_id,
@@ -167,10 +171,11 @@ class PostController extends Controller
         $user->updateBadges();
 
         return response()->json([
-            'message' => $isToxic ? '⚠️ Post submitted but held for moderation.' : 'Post created successfully!',
-            'status'  => $isToxic ? 'warning' : 'success',
-            'post'    => $post
-        ]);
+           'message' => $isToxic ? '⚠️ Post submitted but held for moderation.'
+                       : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
+           'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
+           'post'    => $post
+       ]);
     }
 
     public function destroy($id)

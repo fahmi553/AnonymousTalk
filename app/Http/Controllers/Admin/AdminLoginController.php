@@ -12,15 +12,9 @@ class AdminLoginController extends Controller
 {
     public function showLoginForm()
     {
-        // --- THIS IS THE FIX ---
-        // Check if the user is already logged in and is an admin
         if (Auth::check() && Auth::user()->role === 'admin') {
-            // If they are, redirect them to the admin dashboard.
-            return redirect('/admin/dashboard'); // Or '/admin' if that's your route
+            return redirect('/admin/dashboard');
         }
-        // --- END OF FIX ---
-
-        // If not logged in, show the login page
         return view('welcome');
     }
 
@@ -36,7 +30,6 @@ class AdminLoginController extends Controller
         if ($user && Hash::check($request->password, $user->password) && $user->role === 'admin') {
             Auth::login($user);
 
-            // Make sure to regenerate the session
             $request->session()->regenerate();
 
             return response()->json([

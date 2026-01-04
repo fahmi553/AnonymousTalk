@@ -84,26 +84,38 @@ const submitComment = async () => {
       content: content.value.trim()
     })
 
-    if (res.data.is_flagged) {
+    if (res.data.status === 'warning' || res.data.is_flagged) {
         triggerToast(res.data.message, 'bg-warning text-dark');
-        content.value = "";
+        if (res.data.is_flagged) content.value = "";
         return;
     }
+
     emit('success', res.data.data)
     content.value = ""
 
   } catch (e) {
-    if (e.response && e.response.data && e.response.data.is_flagged) {
-        triggerToast(e.response.data.message, 'bg-warning text-dark');
-        content.value = "";
-    }
-    else if (e.response && e.response.status === 403 && e.response.data.banned) {
-        triggerToast(e.response.data.message, 'bg-danger text-white');
-        setTimeout(() => window.location.href = '/login', 2000);
-    }
-    else {
-        console.error(e)
-        triggerToast("Failed to submit comment", "bg-danger text-white")
+    if (e.response) {
+        const status = e.response.status;
+        const data = e.response.data;
+
+        if (status === 403 && (data.message === 'Your email address is not verified.' || data.message.includes('verify'))) {
+            triggerToast("Please verify your email address to leave a comment.", "bg-warning text-dark");
+        }
+        else if (data.is_flagged) {
+            triggerToast(data.message, 'bg-warning text-dark');
+            content.value = "";
+        }
+        else if (status === 403 && data.banned) {
+            triggerToast(data.message, 'bg-danger text-white');
+            setTimeout(() => window.location.href = '/login', 2000);
+        }
+        else {
+            console.error(e);
+            triggerToast(data.message || "Failed to submit comment", "bg-danger text-white");
+        }
+    } else {
+        console.error(e);
+        triggerToast("Network error. Please try again.", "bg-danger text-white");
     }
   } finally {
     isSubmitting.value = false

@@ -11,6 +11,8 @@ use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\NotificationController;
+use Illuminate\Auth\Events\Verified;
+use App\Models\User;
 
 // Public routes
 Route::get('/posts', [PostController::class, 'index']);
@@ -21,20 +23,43 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/profile/{id}', [ProfileController::class, 'show'])
     ->name('profile.visit')
     ->where('id', '[0-9]+');
-// Route::get('/profile/{id}/posts', [ProfileController::class, 'userPosts']);
-// Route::get('/profile/{id}/comments', [ProfileController::class, 'userComments']);
+
+Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
+    $user = User::findOrFail($id);
+
+    if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        return response()->json(['message' => 'Invalid or expired link.'], 403);
+    }
+
+    if (! $user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+    }
+
+    return redirect(config('app.url') . '/profile?verified=true');
+
+})->middleware(['signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+    return response()->json(['message' => 'Verification link sent!']);
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
-    // Posts
-    Route::post('/posts', [PostController::class, 'store']);
+
+    Route::post('/posts', [PostController::class, 'store'])
+        ->middleware('verified');
+
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
     Route::post('/posts/{postId}/toggle-like', [LikeController::class, 'toggleLike']);
     Route::delete('/posts/{id}', [PostController::class, 'destroy']);
     Route::post('/report', [ReportController::class, 'store']);
 
-    // Comments
-    Route::post('/comments', [CommentController::class, 'store']);
+    Route::post('/comments', [CommentController::class, 'store'])
+        ->middleware('verified');
+
     Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
     Route::post('/comments/{id}/report', [CommentController::class, 'report']);
     Route::get('/comments/{id}/reports', [CommentController::class, 'showReports'])->middleware('admin');
@@ -54,7 +79,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/mark-read', [NotificationController::class, 'markAsRead']);
-Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
@@ -69,4 +94,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/flagged-posts', [AdminController::class, 'getFlaggedPosts']);
     Route::post('/moderate/{type}/{id}/{action}', [ModerationController::class, 'moderateContent']);
     Route::get('/admin/content', [AdminController::class, 'getContent']);
+    Route::post('/moderate/{type}/{id}/{action}', [AdminController::class, 'moderateContent']);
 });
