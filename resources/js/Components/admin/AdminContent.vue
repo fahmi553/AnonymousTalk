@@ -29,7 +29,8 @@
             style="max-width: 200px;"
         >
             <option value="all">All Statuses</option>
-            <option value="pending">Pending Approval</option> <option value="published">Visible (Published)</option>
+            <option value="pending">Pending Approval</option>
+            <option value="published">Visible (Published)</option>
             <option value="moderated">Hidden (Moderated)</option>
             <option value="deleted">Deleted</option>
         </select>

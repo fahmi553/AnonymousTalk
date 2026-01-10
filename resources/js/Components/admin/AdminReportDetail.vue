@@ -70,7 +70,7 @@
             <button class="btn btn-warning px-4 text-dark" @click="openActionModal('hide')">
               <i class="fas fa-eye-slash me-2"></i> Hide Content
             </button>
-            <button class="btn btn-danger px-4" @click="openActionModal('delete')">
+            <button class="btn btn-danger px-4" @click="openActionModal('reject')">
               <i class="fas fa-trash-alt me-2"></i> Delete
             </button>
           </div>
@@ -174,7 +174,7 @@ let bsToast = null;
 
 const modalHeaderClass = computed(() => {
     switch(selectedAction.value) {
-        case 'delete': return 'bg-danger';
+        case 'reject': return 'bg-danger';
         case 'hide': return 'bg-warning text-dark';
         case 'approve': return 'bg-success';
         default: return 'bg-primary';
@@ -183,7 +183,7 @@ const modalHeaderClass = computed(() => {
 
 const modalButtonClass = computed(() => {
     switch(selectedAction.value) {
-        case 'delete': return 'btn-danger';
+        case 'reject': return 'btn-danger';
         case 'hide': return 'btn-warning';
         case 'approve': return 'btn-success';
         default: return 'btn-primary';
@@ -192,7 +192,7 @@ const modalButtonClass = computed(() => {
 
 const modalTitle = computed(() => {
     switch(selectedAction.value) {
-        case 'delete': return 'Confirm Deletion';
+        case 'reject': return 'Confirm Deletion';
         case 'hide': return 'Confirm Hide';
         case 'approve': return 'Confirm Approval';
         default: return 'Confirm';
@@ -201,7 +201,7 @@ const modalTitle = computed(() => {
 
 const modalIcon = computed(() => {
     switch(selectedAction.value) {
-        case 'delete': return 'fas fa-trash-alt';
+        case 'reject': return 'fas fa-trash-alt';
         case 'hide': return 'fas fa-eye-slash';
         case 'approve': return 'fas fa-check-circle';
         default: return 'fas fa-info-circle';
@@ -211,7 +211,7 @@ const modalIcon = computed(() => {
 const modalBody = computed(() => {
     const type = reportData.value?.type || 'item';
     switch(selectedAction.value) {
-        case 'delete': return `Are you sure you want to permanently delete this ${type}?`;
+        case 'reject': return `Are you sure you want to permanently delete this ${type}?`;
         case 'hide': return `Are you sure you want to hide this ${type} from the public?`;
         case 'approve': return `Are you sure you want to mark this ${type} as safe?`;
         default: return 'Proceed with action?';
@@ -246,7 +246,7 @@ const confirmAction = async () => {
         await axios.post(`/api/moderate/${type}/${id}/${selectedAction.value}`);
 
         bsModal.hide();
-        showToast(`Successfully ${selectedAction.value}d the ${type}.`, 'success');
+        showToast(`Successfully processed action.`, 'success');
 
         setTimeout(() => {
             router.push('/admin/dashboard');
@@ -255,7 +255,7 @@ const confirmAction = async () => {
     } catch (err) {
         console.error("Action failed:", err);
         bsModal.hide();
-        showToast(`Failed to ${selectedAction.value}. check console.`, 'error');
+        showToast(`Failed to update status.`, 'error');
     } finally {
         processing.value = false;
     }

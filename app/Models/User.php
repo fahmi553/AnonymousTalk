@@ -120,12 +120,20 @@ class User extends Authenticatable implements MustVerifyEmail
                 'can_post' => false,
                 'can_comment' => false,
             ]);
-        }
-        else {
+        } else {
             $this->update([
                 'can_post' => true,
                 'can_comment' => true,
             ]);
+        }
+        if ($this->trust_score === 0 && $this->trustScoreLogs()->exists()) {
+
+            if (!$this->banned_at) {
+                $this->banned_at = now();
+                $this->ban_reason = 'Trust Score dropped to 0% (System Auto-Ban)';
+                $this->ban = 1;
+                $this->save();
+            }
         }
 
         $this->updateRestrictions();

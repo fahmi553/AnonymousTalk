@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Controllers\Auth\Auth;
+use Illuminate\Support\Facades\Auth;
 use App\Helpers\UsernameGenerator;
 
 class RegisterController extends Controller
@@ -23,8 +23,13 @@ class RegisterController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        $newUsername = UsernameGenerator::generate();
+        while(User::where('username', $newUsername)->exists()){
+            $newUsername = UsernameGenerator::generate();
+        }
+
         $user = User::create([
-            'username'    => UsernameGenerator::generate(),
+            'username'    => $newUsername,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
             'trust_score' => 0,

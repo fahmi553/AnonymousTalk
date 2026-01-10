@@ -30,23 +30,6 @@
                     @csrf
 
                     <div class="mb-3">
-                        <label for="username" class="form-label fw-medium">Username</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-tertiary"><i class="fas fa-user"></i></span>
-                            <input
-                                type="text"
-                                name="username"
-                                id="username"
-                                class="form-control bg-body @error('username') is-invalid @enderror"
-                                required
-                                autofocus
-                                value="{{ old('username') }}"
-                                placeholder="Choose a unique username"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
                         <label for="email" class="form-label fw-medium">Email Address</label>
                         <div class="input-group">
                             <span class="input-group-text bg-body-tertiary"><i class="fas fa-envelope"></i></span>

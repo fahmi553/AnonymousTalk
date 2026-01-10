@@ -266,19 +266,28 @@ class AdminController extends Controller
         ]);
 
         $user = User::findOrFail($id);
+
         $user->increment('trust_score', $request->score_change);
-        $user->updateBadges();
+
         \App\Models\TrustScoreLog::create([
             'user_id' => $user->user_id,
             'action_type' => 'admin_adjustment',
             'score_change' => $request->score_change,
             'reason' => $request->reason,
-            'timestamp' => now(),
         ]);
-        $user->load('badges');
 
+        $user->updateBadges();
+
+        $type = $request->score_change < 0 ? 'warning' : 'info';
+
+        $sign = $request->score_change > 0 ? '+' : '';
+        $message = "Your Trust Score was adjusted by an Admin ({$sign}{$request->score_change}). Reason: {$request->reason}";
+
+        $user->notify(new AdminActionNotification($type, $message));
+
+        $user->load('badges');
         return response()->json([
-            'message' => 'Trust score updated successfully.',
+            'message' => 'Trust score updated and user notified.',
             'new_score' => $user->trust_score,
             'badges' => $user->badges
         ]);
@@ -302,14 +311,7 @@ class AdminController extends Controller
 
         if ($type === 'posts') {
             $query = Post::query();
-
             $query->withoutGlobalScopes();
-
-            if (method_exists($query->getModel(), 'bootSoftDeletes')) {
-                $query->withTrashed();
-            }
-
-            $query->with('user')->withCount('reports');
 
             if ($search) {
                 $query->where(function($q) use ($search) {
@@ -317,16 +319,11 @@ class AdminController extends Controller
                       ->orWhereHas('user', fn($u) => $u->where('username', 'like', "%{$search}%"));
                 });
             }
+            $query->with('user')->withCount('reports');
 
         } else {
             $query = Comment::query();
             $query->withoutGlobalScopes();
-
-            if (method_exists($query->getModel(), 'bootSoftDeletes')) {
-                $query->withTrashed();
-            }
-
-            $query->with('user', 'post')->withCount('reports');
 
             if ($search) {
                 $query->where(function($q) use ($search) {
@@ -334,14 +331,11 @@ class AdminController extends Controller
                       ->orWhereHas('user', fn($u) => $u->where('username', 'like', "%{$search}%"));
                 });
             }
+            $query->with('user', 'post')->withCount('reports');
         }
 
         if ($status !== 'all') {
-            if ($status === 'deleted' && method_exists($query->getModel(), 'bootSoftDeletes')) {
-                $query->onlyTrashed();
-            } else {
-                $query->where('status', $status);
-            }
+            $query->where('status', $status);
         }
 
         $items = $query->latest()->paginate(15);
@@ -402,6 +396,13 @@ class AdminController extends Controller
                 $content->save();
                 break;
         }
+
+        $reportableType = $type === 'post' ? \App\Models\Post::class : \App\Models\Comment::class;
+
+        \App\Models\Report::where('reportable_id', $id)
+            ->where('reportable_type', $reportableType)
+            ->where('status', 'pending')
+            ->update(['status' => 'resolved']);
 
         return response()->json(['message' => "Content {$action}ed successfully."]);
     }

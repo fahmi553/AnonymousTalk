@@ -97,9 +97,10 @@ class PostController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->can_post) {
+
+        if ($user->trust_score < 10) {
             return response()->json([
-                'message' => 'Your trust score is too low to create posts.',
+                'message' => 'Your trust score is too low to create posts (Minimum 10%).',
                 'status' => 'error'
             ], 403);
         }
@@ -129,11 +130,18 @@ class PostController extends Controller
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
+
+            \App\Models\TrustScoreLog::create([
+                'user_id'      => auth()->id(),
+                'action_type'  => 'system_warning',
+                'score_change' => 0,
+                'reason'       => 'Sentiment AI Offline - Post allowed without check',
+            ]);
         }
 
         if (!$isToxic && $user->trust_score < 30) {
            $status = 'pending';
-       }
+        }
 
         $post = Post::create([
             'user_id'         => auth()->id(),
@@ -153,26 +161,27 @@ class PostController extends Controller
 
         $user = $post->user;
 
-        if ($isToxic) {
-            \App\Models\Report::create([
-                'reporter_id'     => null,
-                'reportable_id'   => $post->post_id,
-                'reportable_type' => Post::class,
-                'reason'          => 'High Negative Sentiment',
-                'details'         => "AI detected toxic post content (" . round($confidence * 100, 1) . "%).",
-                'status'          => 'pending',
-            ]);
+       if ($isToxic) {
+           \App\Models\Report::create([
+               'reporter_id'     => null,
+               'reportable_id'   => $post->post_id,
+               'reportable_type' => Post::class,
+               'reason'          => 'High Negative Sentiment',
+               'details'         => "AI detected toxic post content (" . round($confidence * 100, 1) . "%).",
+               'status'          => 'pending',
+           ]);
 
-            $user->applyTrustChange(User::TRUST_SCORE_POST_PENALTY, 'Toxic Post Flagged', 'ai_moderation');
-        } else {
-            $user->applyTrustChange(User::TRUST_SCORE_POST_REWARD, 'Post Submitted', 'post_reward');
-        }
+           $user->applyTrustChange(User::TRUST_SCORE_POST_PENALTY, 'Toxic Post Flagged', 'ai_moderation');
+       }
+       elseif ($status === 'published') {
+           $user->applyTrustChange(User::TRUST_SCORE_POST_REWARD, 'Post Submitted', 'post_reward');
+       }
 
         $user->updateBadges();
 
         return response()->json([
            'message' => $isToxic ? '⚠️ Post submitted but held for moderation.'
-                       : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
+                                 : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
            'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
            'post'    => $post
        ]);
@@ -188,12 +197,11 @@ class PostController extends Controller
 
         DB::transaction(function () use ($post) {
             foreach ($post->comments as $comment) {
-                $this->deleteCommentRecursively($comment);
+                $this->deleteCommentRecursively($comment, $post->user_id);
             }
-
             if ($post->user) {
-                $post->user->applyTrustChange(User::TRUST_SCORE_POST_PENALTY, 'Post Deleted by User/Admin', 'post_penalty');
-                $post->user->updateBadges(); // Refresh badges
+                $post->user->applyTrustChange(User::TRUST_SCORE_POST_PENALTY, 'Post Deleted', 'post_penalty');
+                $post->user->updateBadges();
             }
 
             $post->delete();
@@ -202,22 +210,21 @@ class PostController extends Controller
         return response()->json(['message' => 'Post deleted successfully']);
     }
 
-    private function deleteCommentRecursively($comment)
+    private function deleteCommentRecursively($comment, $targetUserId)
     {
         $comment->load('user', 'replies.user');
 
         foreach ($comment->replies as $reply) {
-            $this->deleteCommentRecursively($reply);
+            $this->deleteCommentRecursively($reply, $targetUserId);
         }
 
-        if ($comment->user) {
-            $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted Recursively', 'comment_penalty');
+        if ($comment->user_id === $targetUserId && $comment->user) {
+            $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Own Comment Deleted with Post', 'comment_penalty');
             $comment->user->updateBadges();
         }
 
         $comment->delete();
     }
-
     public function updateStatus(Request $request, Post $post)
     {
         $request->validate(['status' => ['required', Rule::in(Post::STATUSES)]]);

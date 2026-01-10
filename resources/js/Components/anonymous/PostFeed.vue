@@ -181,7 +181,10 @@
                   <i class="far fa-comment-alt me-2"></i>{{ post.comments_count || 0 }}
                 </router-link>
 
-                <button class="btn btn-sm btn-light rounded-pill px-3 fw-bold text-secondary ms-auto action-btn">
+                <button
+                  class="btn btn-sm btn-light rounded-pill px-3 fw-bold text-secondary ms-auto action-btn"
+                  @click.stop="sharePost(post)"
+                  >
                   <i class="fas fa-share me-2"></i>Share
                 </button>
               </div>
@@ -219,30 +222,48 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import { useAuth } from '../../store/auth'; // Using your Auth Store
-
+import { useAuth } from '../../store/auth';
 const { authUser } = useAuth();
 const route = useRoute();
 const router = useRouter();
-
-// State
 const posts = ref([]);
 const categories = ref([]);
 const loading = ref(true);
-const filter = ref('latest'); // latest | trending
-const sortOrder = ref('desc'); // desc | asc | most_commented
+const filter = ref('latest');
+const sortOrder = ref('desc');
 const search = ref('');
 const selectedCategory = ref('');
 const meta = ref({ current_page: 1, last_page: 1 });
-
-// Helper: Get Sort Label
 const sortLabel = computed(() => {
     if (sortOrder.value === 'asc') return 'Oldest First';
     if (sortOrder.value === 'most_commented') return 'Most Commented';
     return 'Newest First';
 });
 
-// --- API ACTIONS ---
+const sharePost = async (post) => {
+  const postUrl = `${window.location.origin}/posts/${post.post_id}`;
+
+  const shareData = {
+    title: post.title,
+    text: `Check out this post by ${post.user?.username || 'Anonymous'}`,
+    url: postUrl,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    }
+    else {
+      await navigator.clipboard.writeText(postUrl);
+      alert("Link copied to clipboard!");
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Share failed:', err);
+    }
+  }
+};
+
 
 const fetchCategories = async () => {
   try {
@@ -259,11 +280,10 @@ const fetchPosts = async (page = 1) => {
     const res = await axios.get('/api/posts', {
       params: {
         page: page,
-        filter: filter.value, // Pass trending/latest filter
-        sort: sortOrder.value, // Pass desc/asc/most_commented
+        filter: filter.value,
+        sort: sortOrder.value,
         category_id: selectedCategory.value,
         search: search.value,
-        // If sorting by comments, we usually want all posts, but you can add with_comments_only logic if desired
       }
     });
     posts.value = res.data.data || [];
@@ -276,9 +296,7 @@ const fetchPosts = async (page = 1) => {
 };
 
 const toggleLike = async (post) => {
-  if (!authUser.value) return; // Guard clause
-
-  // Optimistic UI Update (Update number immediately)
+  if (!authUser.value) return;
   const originalLiked = post.liked;
   const originalCount = post.likes_count;
 
@@ -287,20 +305,16 @@ const toggleLike = async (post) => {
 
   try {
     await axios.post(`/api/posts/${post.post_id}/toggle-like`);
-    // Ideally backend returns new count to confirm
   } catch (err) {
-    // Revert if failed
     post.liked = originalLiked;
     post.likes_count = originalCount;
     console.error('Like failed', err);
   }
 };
 
-// --- FILTERS ---
 
 const setFilter = (newFilter) => {
   filter.value = newFilter;
-  // If trending, we might default sort to most_commented or handled by backend 'trending' logic
   fetchPosts(1);
 };
 
@@ -348,10 +362,8 @@ const truncate = (text, length) => {
   return text.length > length ? text.substring(0, length) + '...' : text;
 };
 
-// --- LIFECYCLE ---
 
 onMounted(() => {
-  // Check URL query params on load (for sidebar links like /feed?category=1)
   if (route.query.category) selectedCategory.value = Number(route.query.category);
   if (route.query.search) search.value = route.query.search;
 
@@ -359,7 +371,6 @@ onMounted(() => {
   fetchPosts();
 });
 
-// Watch for route changes (if clicking sidebar links while already on feed)
 watch(() => route.query, (newQuery) => {
     if (newQuery.category) {
         selectedCategory.value = Number(newQuery.category);

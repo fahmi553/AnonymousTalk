@@ -77,9 +77,9 @@ class CommentController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->can_comment) {
+        if ($user->trust_score < 10) {
             return response()->json([
-                'message' => 'Your trust score is too low to comment.',
+                'message' => 'Your trust score is too low to comment (Minimum 10%).',
                 'status' => 'error'
             ], 403);
         }
@@ -106,7 +106,14 @@ class CommentController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            Log::warning("Sentiment AI Offline");
+            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
+
+            \App\Models\TrustScoreLog::create([
+                'user_id'      => auth()->id(),
+                'action_type'  => 'system_warning',
+                'score_change' => 0,
+                'reason'       => 'Sentiment AI Offline - Post allowed without check',
+            ]);
         }
 
         $comment = Comment::create([

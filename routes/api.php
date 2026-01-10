@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('verified');
 
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
+    Route::patch('/comments/{comment}/status', [CommentController::class, 'updateStatus']);
     Route::post('/posts/{postId}/toggle-like', [LikeController::class, 'toggleLike']);
     Route::delete('/posts/{id}', [PostController::class, 'destroy']);
     Route::post('/report', [ReportController::class, 'store']);

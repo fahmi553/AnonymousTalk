@@ -75,6 +75,14 @@
                 <i class="fas fa-flag me-2"></i>
                 <span>Report</span>
                 </button>
+
+                <button
+                    class="btn btn-light d-flex align-items-center rounded-pill px-3 py-2 transition-btn"
+                    @click="sharePost"
+                >
+                    <i class="fas fa-share-alt me-2"></i>
+                    <span class="fw-bold">Share</span>
+                </button>
             </div>
           </div>
         </div>
@@ -115,7 +123,7 @@
             :auth-user-id="authUser?.user_id"
             :time-ago="timeAgo"
             @reply="handleReply"
-            @deleted="handleDelete"
+            @success="handleCommentSuccess"  @deleted="handleDelete"
             @delete-request="openDeleteModal"
             @report-request="openReportModal"
             />
@@ -268,6 +276,31 @@ const getAvatarUrl = (filename) => {
   return `/images/avatars/${filename}`;
 };
 
+// Inside <script setup>
+
+const sharePost = async () => {
+  const shareData = {
+    title: post.value.title,
+    text: `Check out this post by ${post.value.user?.username || 'Anonymous'}`,
+    url: window.location.href,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    }
+    else {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast("Link copied to clipboard!", "success");
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Share failed:', err);
+      showToast("Failed to share.", "error");
+    }
+  }
+};
+
 
 const fetchCategories = async () => {
   try {
@@ -315,10 +348,8 @@ const showToast = (message, type = "success") => {
   toastMessage.value = message
   toastClass.value = type === "success" ? "bg-success" : (type === "warning" ? "bg-warning text-dark" : "bg-danger");
 
-  // Force it to show using Vue (no Bootstrap JS needed)
   showToastVisible.value = true
 
-  // Auto-hide after 3 seconds
   setTimeout(() => {
     showToastVisible.value = false
   }, 3000)

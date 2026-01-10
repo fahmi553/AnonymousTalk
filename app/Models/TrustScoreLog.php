@@ -9,9 +9,8 @@ class TrustScoreLog extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'log_id';
-
     protected $table = 'trust_score_logs';
+    protected $primaryKey = 'log_id';
 
     protected $fillable = [
         'user_id',
@@ -22,6 +21,6 @@ class TrustScoreLog extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }
