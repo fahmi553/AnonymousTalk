@@ -15,18 +15,40 @@
         <div class="card-body p-4 p-md-5">
 
           <div class="d-flex align-items-center mb-4">
-            <img
+            <router-link
+              v-if="post.user?.user_id"
+              :to="`/profile/${post.user.user_id}`"
+              class="me-3 flex-shrink-0"
+            >
+              <img
                 :src="getAvatarUrl(post.user?.avatar)"
                 @error="$event.target.src = '/images/avatars/default.jpg'"
-                :alt="post.user?.username || 'User'"
+                :alt="post.user?.username"
+                class="rounded-circle border bg-white profile-avatar"
+                style="width: 50px; height: 50px; object-fit: cover;"
+              />
+            </router-link>
+
+            <img
+                v-else
+                :src="'/images/avatars/default.jpg'"
+                alt="Anonymous"
                 class="rounded-circle me-3 flex-shrink-0 border bg-white"
                 style="width: 50px; height: 50px; object-fit: cover;"
             />
+
             <div class="flex-grow-1">
-                <div class="fw-bold fs-5 text-body-emphasis">
-                    {{ post.user?.username ?? 'Anonymous' }}
-                </div>
-                <small class="text-secondary">{{ timeAgo(post.created_at) }}</small>
+              <div class="fw-bold fs-5 text-body-emphasis">
+                <router-link
+                  v-if="post.user?.user_id"
+                  :to="`/profile/${post.user.user_id}`"
+                  class="text-decoration-none text-body-emphasis profile-link"
+                >
+                  {{ post.user.username }}
+                </router-link>
+                <span v-else>Anonymous</span>
+              </div>
+              <small class="text-secondary">{{ timeAgo(post.created_at) }}</small>
             </div>
           </div>
 
@@ -476,5 +498,18 @@ onMounted(() => {
   0% { transform: scale(1); }
   50% { transform: scale(1.3); }
   100% { transform: scale(1); }
+}
+
+.profile-avatar {
+  transition: transform 0.2s ease;
+}
+.profile-avatar:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.profile-link:hover {
+  text-decoration: underline !important;
+  color: var(--bs-primary) !important;
 }
 </style>

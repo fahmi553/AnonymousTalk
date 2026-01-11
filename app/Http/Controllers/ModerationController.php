@@ -17,50 +17,62 @@ class ModerationController extends Controller
         return $user && $user->role === 'admin';
     }
 
-    public function moderateContent($type, $id, $action)
+    public function moderateContent(Request $request, $type, $id, $action)
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        $modelClass = $type === 'post' ? \App\Models\Post::class : \App\Models\Comment::class;
+        $content = $modelClass::findOrFail($id);
 
-        $model = null;
-        $possibleMorphTypes = [];
-
-        if ($type === 'post') {
-            $model = Post::findOrFail($id);
-            $possibleMorphTypes = [Post::class, 'App\Models\Post', 'posts'];
-        } elseif ($type === 'comment') {
-            $model = Comment::findOrFail($id);
-            $possibleMorphTypes = [Comment::class, 'App\Models\Comment', 'comments'];
-        } else {
-            return response()->json(['error' => 'Invalid content type'], 400);
-        }
+        $previousStatus = $content->status;
 
         switch ($action) {
             case 'approve':
-                $model->status = 'published';
-                break;
-            case 'hide':
-                $model->status = 'moderated';
-                break;
-            case 'delete':
-                $model->status = 'deleted';
-                break;
-            default:
-                 return response()->json(['error' => 'Invalid action'], 400);
-        }
-        $model->save();
+                $content->status = 'published';
+                $content->save();
+                if ($previousStatus !== 'published') {
 
-        $updatedCount = Report::where('reportable_id', $id)
-            ->whereIn('reportable_type', $possibleMorphTypes)
+                    if ($type === 'post' && $content->user) {
+                        $content->user->applyTrustChange(2, 'Post Approved by Admin', 'post_approved');
+                    }
+                    elseif ($type === 'comment' && $content->user) {
+                         $content->user->applyTrustChange(1, 'Comment Approved by Admin', 'comment_approved');
+                    }
+
+                    $content->user->updateBadges();
+                }
+                break;
+
+            case 'reject':
+                $content->status = 'deleted';
+                $content->save();
+                if ($previousStatus === 'published' && $content->user) {
+
+                    if ($type === 'post') {
+                        $content->user->applyTrustChange(\App\Models\User::TRUST_SCORE_POST_PENALTY, 'Post Deleted by Admin (Report Valid)', 'admin_moderation');
+                    }
+                    elseif ($type === 'comment') {
+                        $content->user->applyTrustChange(\App\Models\User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted by Admin (Report Valid)', 'admin_moderation');
+                    }
+
+                    $content->user->updateBadges();
+                }
+                break;
+
+            case 'hide':
+                $content->status = 'moderated';
+                $content->save();
+                if ($previousStatus === 'published' && $content->user) {
+                     $points = $type === 'post' ? -2 : -1;
+                     $content->user->applyTrustChange($points, ucfirst($type) . ' Hidden by Admin', 'admin_moderation');
+                     $content->user->updateBadges();
+                }
+                break;
+        }
+
+        \App\Models\Report::where('reportable_id', $id)
+            ->where('reportable_type', $modelClass)
             ->where('status', 'pending')
             ->update(['status' => 'resolved']);
 
-        Log::info("Moderation: {$action} on {$type} #{$id}. Closed {$updatedCount} reports.");
-
-        return response()->json([
-            'message' => ucfirst($type) . " successfully {$action}d.",
-            'reports_closed' => $updatedCount
-        ]);
+        return response()->json(['message' => "Content processed successfully."]);
     }
 }
