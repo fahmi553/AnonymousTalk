@@ -51,7 +51,7 @@
                 </form>
 
                 <div class="mt-4 text-center">
-                    <a href="{{ route('login') }}" class="text-body-secondary text-decoration-none small">Back to Login</a>
+                    <a href="{{ route('login') }}" class="text-body-secondary text-decoration-underline small">Back to Login</a>
                 </div>
             </div>
         </div>

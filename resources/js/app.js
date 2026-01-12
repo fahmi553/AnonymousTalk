@@ -4,7 +4,6 @@ import '../css/app.css'
 import axios from 'axios'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
-
 import PostForm from './Components/anonymous/PostForm.vue'
 import PostFeed from './Components/anonymous/PostFeed.vue'
 import CommentForm from './Components/anonymous/CommentForm.vue'
@@ -33,6 +32,7 @@ import CookiePolicy from './Components/pages/CookiePolicy.vue';
 import AdminContent from './Components/admin/AdminContent.vue';
 import ForgotPassword from './Components/auth/ForgotPassword.vue';
 import ResetPassword from './Components/auth/ResetPassword.vue';
+import VerificationAlert from './Components/VerificationAlert.vue';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -108,12 +108,12 @@ app.component('comment-form', CommentForm)
 app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
 app.component('app-sidebar', AppSidebar)
-app.mount('#app')
+app.component('verification-alert', VerificationAlert);
 
+app.mount('#app')
 const headerApp = createApp(AppHeader)
 headerApp.use(router)
 headerApp.mount('#app-header')
-
 const footerApp = createApp(AppFooter)
 footerApp.use(router)
 footerApp.mount('#app-footer')

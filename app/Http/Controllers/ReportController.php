@@ -30,11 +30,24 @@ class ReportController extends Controller
             return response()->json(['message' => 'Invalid report type'], 400);
         }
 
+        $reportableType = $modelMap[$request->type];
+
+        $existingReport = Report::where('reporter_id', Auth::id())
+            ->where('reportable_type', $reportableType)
+            ->where('reportable_id', $request->target_id)
+            ->exists();
+
+        if ($existingReport) {
+            return response()->json([
+                'message' => 'You have already reported this content. We are reviewing it.'
+            ], 409);
+        }
+
         $report = new Report();
         $report->reporter_id = Auth::id();
         $report->reason = $request->reason;
         $report->details = $request->details ?? $request->reason;
-        $report->reportable_type = $modelMap[$request->type];
+        $report->reportable_type = $reportableType;
         $report->reportable_id = $request->target_id;
         $report->status = 'pending';
         $report->save();
@@ -48,6 +61,17 @@ class ReportController extends Controller
             'reason' => 'required|string|max:1000',
             'details' => 'nullable|string|max:1000'
         ]);
+
+        $existingReport = Report::where('reporter_id', auth()->id())
+            ->where('reportable_type', User::class)
+            ->where('reportable_id', $user->user_id)
+            ->exists();
+
+        if ($existingReport) {
+            return response()->json([
+                'message' => 'You have already reported this user.'
+            ], 409);
+        }
 
         $report = Report::create([
             'reporter_id' => auth()->id(),

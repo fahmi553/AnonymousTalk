@@ -29,7 +29,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 @endif
-
+                <verification-alert></verification-alert>
                 <router-view></router-view>
             </main>
         </div>
@@ -41,6 +41,7 @@
         window.authUserName = @json(auth()->user()->username ?? null);
         window.authUserAvatar = @json(auth()->user()->avatar ?? null);
         window.flashMessage = @json(session('status') ?? session('success') ?? null);
+        window.isEmailVerified = @json(auth()->check() && auth()->user()->hasVerifiedEmail());
     </script>
 </body>
 </html>

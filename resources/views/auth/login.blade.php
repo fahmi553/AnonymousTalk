@@ -92,7 +92,7 @@
                             </label>
                         </div>
                         @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}" class="text-body-secondary text-decoration-none small">
+                            <a href="{{ route('password.request') }}" class="text-body-secondary text-decoration-underline small">
                                 Forgot password?
                             </a>
                         @endif
@@ -113,7 +113,9 @@
                 </a>
 
                 <div class="mt-4 text-center">
-                    <a href="{{ route('register') }}" class="text-body-secondary text-decoration-none small">Don't have an account? Register here</a>
+                    <a href="{{ route('register') }}" class="text-body-secondary text-decoration-none small">
+                        Don't have an account? <span class="text-decoration-underline">Register here</span>
+                    </a>
                 </div>
             </div>
         </div>

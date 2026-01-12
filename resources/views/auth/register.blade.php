@@ -79,8 +79,9 @@
                 </form>
 
                 <div class="mt-4 text-center">
-                    <a href="{{ route('login') }}" class="text-body-secondary text-decoration-none small">Already have an account? Log in here</a>
-                </div>
+                    <a href="{{ route('login') }}" class="text-body-secondary text-decoration-none small">
+                        Already have an account? <span class="text-decoration-underline">Log in here</span>
+                    </a>
             </div>
         </div>
     </div>

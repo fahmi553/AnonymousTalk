@@ -146,8 +146,13 @@ class CommentController extends Controller
 
             $user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Toxic comment detected by AI', 'ai_moderation');
         } else {
-            $user->applyTrustChange(User::TRUST_SCORE_COMMENT_REWARD, 'Comment posted successfully', 'comment_reward');
-        }
+            $post = Post::find($request->post_id);
+            $isSelfComment = $post->user_id === auth()->id();
+
+            if (!$isSelfComment) {
+                $user->applyTrustChange(User::TRUST_SCORE_COMMENT_REWARD, 'Comment posted', 'comment_reward');
+            } else {
+            }
 
         $user->updateBadges();
 
