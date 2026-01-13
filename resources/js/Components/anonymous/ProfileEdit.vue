@@ -62,13 +62,18 @@
             <div class="col-12">
               <label class="form-label fw-bold text-secondary small text-uppercase">Account Security</label>
               <div class="mb-3">
-                <label class="form-label">Email Address</label>
-                <input
-                  v-model="form.email"
-                  type="email"
-                  class="form-control bg-body"
-                  required
-                />
+                  <label class="form-label">Email Address</label>
+                  <input
+                      type="email"
+                      v-model="form.email"
+                      class="form-control"
+                      :class="{ 'bg-secondary-subtle': isGoogleUser }"
+                      :disabled="isGoogleUser"
+                  >
+                  <small v-if="isGoogleUser" class="text-muted">
+                      <i class="fas fa-lock me-1"></i>
+                      Linked to your Google account. You cannot change this email.
+                  </small>
               </div>
             </div>
 
@@ -266,11 +271,7 @@ const fetchProfileAndAvatars = async () => {
     form.value.username = user.username;
     form.value.email = user.email;
     form.value.avatar = user.avatar || "default.jpg";
-    isGoogleUser.value = user.is_google_user;
-
-    if (user.google_id) {
-        isGoogleUser.value = true;
-    }
+    isGoogleUser.value = !!user.google_id;
 
   } catch (err) {
     console.error("Failed to load data", err);

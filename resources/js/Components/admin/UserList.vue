@@ -8,18 +8,30 @@
 
     <div class="card bg-body shadow-sm border-0 rounded-lg">
       <div class="card-header bg-body py-3">
-        <div class="row align-items-center">
-          <div class="col-md-6">
-            <h6 class="mb-0 fw-bold">All Users System List</h6>
+        <div class="row align-items-center g-2">
+          <div class="col-md-6 d-flex align-items-center gap-3">
+            <h6 class="mb-0 fw-bold text-nowrap">All Users</h6>
+            <select
+              class="form-select form-select-sm"
+              style="width: auto;"
+              v-model="perPage"
+              @change="fetchUsers()"
+            >
+              <option :value="10">10 per page</option>
+              <option :value="25">25 per page</option>
+              <option :value="50">50 per page</option>
+              <option :value="100">100 per page</option>
+            </select>
           </div>
+
           <div class="col-md-6">
-            <div class="input-group">
+            <div class="input-group input-group-sm">
               <input
                 type="text"
                 class="form-control bg-body"
                 placeholder="Search by username..."
                 v-model="searchQuery"
-                @keyup.enter="fetchUsers"
+                @keyup.enter="fetchUsers()"
               >
               <button class="btn btn-primary" type="button" @click="fetchUsers()">
                 <i class="fas fa-search"></i>
@@ -52,7 +64,6 @@
 
               <tr v-for="user in users.data" :key="user.user_id" :class="{ 'bg-danger-subtle': user.banned_at }">
                 <td class="ps-4 text-muted">#{{ user.user_id }}</td>
-
                 <td>
                   <div class="d-flex align-items-center">
                     <div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
@@ -69,7 +80,6 @@
                     </div>
                   </div>
                 </td>
-
                 <td class="text-center" style="max-width: 300px;">
                   <div v-if="user.badges && user.badges.length > 0" class="d-flex justify-content-center flex-wrap gap-2">
                     <div
@@ -92,7 +102,6 @@
                   </div>
                   <span v-else class="text-muted small">-</span>
                 </td>
-
                 <td class="text-center">
                   <span
                     class="badge rounded-pill"
@@ -107,7 +116,6 @@
                     {{ user.trust_score }}
                   </span>
                 </td>
-
                 <td class="text-end pe-4">
                   <router-link
                     :to="{ name: 'ReportUserDetails', params: { id: user.user_id } }"
@@ -122,17 +130,47 @@
         </div>
       </div>
 
-      <div class="card-footer bg-body py-3 d-flex justify-content-end" v-if="users.meta">
-        <nav>
-          <ul class="pagination pagination-sm mb-0">
-            <li class="page-item" :class="{ disabled: !users.links.prev }">
-              <button class="page-link" @click="changePage(users.links.prev)">Previous</button>
-            </li>
-            <li class="page-item" :class="{ disabled: !users.links.next }">
-              <button class="page-link" @click="changePage(users.links.next)">Next</button>
-            </li>
-          </ul>
-        </nav>
+      <div class="card-footer bg-body py-3" v-if="users.meta">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+
+          <div class="text-muted small">
+            Showing {{ users.meta.from || 0 }} to {{ users.meta.to || 0 }} of {{ users.meta.total }} entries
+            <span class="fw-bold mx-1">|</span>
+            Page {{ users.meta.current_page }} of {{ users.meta.last_page }}
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+
+            <button
+                class="btn btn-sm btn-outline-secondary"
+                :disabled="!users.links.prev"
+                @click="changePage(users.links.prev)"
+            >
+                Previous
+            </button>
+
+            <button
+                class="btn btn-sm btn-outline-secondary"
+                :disabled="!users.links.next"
+                @click="changePage(users.links.next)"
+            >
+                Next
+            </button>
+
+            <div class="ms-2">
+                <input
+                    type="number"
+                    class="form-control form-control-sm text-center"
+                    style="width: 60px;"
+                    v-model="jumpPage"
+                    min="1"
+                    :max="users.meta.last_page"
+                    @keyup.enter="goToSpecificPage"
+                >
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -146,6 +184,8 @@ import AdminStats from './AdminStats.vue';
 const users = ref({ data: [], links: {}, meta: {} });
 const loading = ref(false);
 const searchQuery = ref('');
+const perPage = ref(10);
+const jumpPage = ref(1);
 
 const initTooltips = () => {
   nextTick(() => {
@@ -163,9 +203,37 @@ const initTooltips = () => {
 const fetchUsers = async (url = '/api/admin/users') => {
   loading.value = true;
   try {
-    const params = { search: searchQuery.value };
-    const res = await axios.get(url, { params });
-    users.value = res.data;
+    const params = {
+        search: searchQuery.value,
+        per_page: perPage.value
+    };
+
+    const config = { params };
+
+    if (url !== '/api/admin/users') {
+        if (!url.includes('per_page')) {
+             url += `&per_page=${perPage.value}`;
+        }
+    }
+
+    const res = await axios.get(url, url === '/api/admin/users' ? config : {});
+
+    users.value = {
+        data: res.data.data,
+        links: {
+            next: res.data.next_page_url,
+            prev: res.data.prev_page_url
+        },
+        meta: {
+            current_page: res.data.current_page,
+            last_page: res.data.last_page,
+            from: res.data.from,
+            to: res.data.to,
+            total: res.data.total
+        }
+    };
+
+    jumpPage.value = users.value.meta.current_page;
 
     initTooltips();
   } catch (err) {
@@ -177,6 +245,14 @@ const fetchUsers = async (url = '/api/admin/users') => {
 
 const changePage = (url) => {
   if (url) fetchUsers(url);
+};
+
+const goToSpecificPage = () => {
+    if (!jumpPage.value || jumpPage.value < 1 || jumpPage.value > users.value.meta.last_page) {
+        return;
+    }
+    const url = `/api/admin/users?page=${jumpPage.value}&per_page=${perPage.value}&search=${searchQuery.value}`;
+    fetchUsers(url);
 };
 
 let timeout = null;

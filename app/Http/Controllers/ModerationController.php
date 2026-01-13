@@ -19,6 +19,7 @@ class ModerationController extends Controller
 
     public function moderateContent(Request $request, $type, $id, $action)
     {
+        $type = \Illuminate\Support\Str::singular($type);
         $modelClass = $type === 'post' ? \App\Models\Post::class : \App\Models\Comment::class;
         $content = $modelClass::findOrFail($id);
 
@@ -34,7 +35,7 @@ class ModerationController extends Controller
                         $content->user->applyTrustChange(2, 'Post Approved by Admin', 'post_approved');
                     }
                     elseif ($type === 'comment' && $content->user) {
-                         $content->user->applyTrustChange(1, 'Comment Approved by Admin', 'comment_approved');
+                        $content->user->applyTrustChange(1, 'Comment Approved by Admin', 'comment_approved');
                     }
 
                     $content->user->updateBadges();

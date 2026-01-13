@@ -90,26 +90,25 @@ class User extends Authenticatable implements MustVerifyEmail
         $oldScore = $this->trust_score;
 
         $this->trust_score = max(0, min(100, $this->trust_score + $change));
+
+        if ($this->trust_score === 0 && is_null($this->banned_at)) {
+            $this->banned_at = now();
+            $this->ban_reason = "System Auto-Ban: Trust Score reached 0%.";
+
+            $reason .= " (User Banned)";
+        }
+
         $this->save();
 
-        Log::info('Trust score updated', [
-            'user_id' => $this->user_id,
-            'old_score' => $oldScore,
-            'change' => $change,
-            'new_score' => $this->trust_score,
-            'reason' => $reason,
-            'action_type' => $actionType,
-        ]);
-
-        TrustScoreLog::create([
+        \App\Models\TrustScoreLog::create([
             'user_id' => $this->user_id,
             'action_type' => $actionType,
             'score_change' => $change,
             'reason' => $reason,
-            'timestamp' => now(),
+            'new_score' => $this->trust_score,
+            'created_at' => now(),
         ]);
 
-        $this->enforceTrustConsequences();
         $this->updateBadges();
     }
 
@@ -188,10 +187,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     private function updateTrustBadges($trustBadges)
     {
-        Log::info('Evaluating trust badges', [
-            'user_id' => $this->user_id,
-            'trust_score' => $this->trust_score,
-        ]);
+        // Log::info('Evaluating trust badges', [
+        //     'user_id' => $this->user_id,
+        //     'trust_score' => $this->trust_score,
+        // ]);
 
         $trustBadgeIds = $trustBadges->pluck('badge_id')->toArray();
 
@@ -247,19 +246,19 @@ class User extends Authenticatable implements MustVerifyEmail
                     'awarded_at' => now(),
                 ]);
 
-                Log::info('Behavior badge attached', [
-                    'user_id' => $this->user_id,
-                    'badge' => $badge->badge_name,
-                ]);
+                // Log::info('Behavior badge attached', [
+                //     'user_id' => $this->user_id,
+                //     'badge' => $badge->badge_name,
+                // ]);
             }
 
             if (!$conditionMet && $hasBadge) {
                 $this->badges()->detach($badge->badge_id);
 
-                Log::info('Behavior badge detached', [
-                    'user_id' => $this->user_id,
-                    'badge' => $badge->badge_name,
-                ]);
+                // Log::info('Behavior badge detached', [
+                //     'user_id' => $this->user_id,
+                //     'badge' => $badge->badge_name,
+                // ]);
             }
         }
     }

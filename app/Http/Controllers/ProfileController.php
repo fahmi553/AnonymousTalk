@@ -13,6 +13,7 @@ use App\Models\Badge;
 use Illuminate\Support\Facades\DB;
 use App\Models\Like;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -206,14 +207,40 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'username' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
-            'password' => 'nullable|string|min:8|confirmed',
-            'avatar' => 'nullable|string|in:' . implode(',', $this->allowedAvatars),
+            'username' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->user_id, 'user_id')
+            ],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'avatar'   => ['nullable', 'string', 'in:' . implode(',', $this->allowedAvatars)],
+        ], [
+            'email.unique' => 'Someone is already using this email address.',
         ]);
 
+        if ($user->google_id && $request->email !== $user->email) {
+            return response()->json([
+                'message' => 'You cannot change the email address for Google-linked accounts.'
+            ], 422);
+        }
+
         $user->username = $request->username;
-        $user->email = $request->email;
+
+        if (!$user->google_id && $request->email !== $user->email) {
+            $user->email = $request->email;
+
+            $user->email_verified_at = null;
+
+            if ($user->trust_score >= 10) {
+                $user->trust_score -= 10;
+            } else {
+                $user->trust_score = 0;
+            }
+
+            $user->sendEmailVerificationNotification();
+        }
 
         if ($request->has('avatar')) {
             $user->avatar = $request->avatar;
@@ -230,7 +257,7 @@ class ProfileController extends Controller
         $user->save();
 
         return response()->json([
-            'message' => 'Profile updated successfully!',
+            'message' => 'Profile updated! If you changed your email, please verify it again.',
             'user' => $user,
         ]);
     }

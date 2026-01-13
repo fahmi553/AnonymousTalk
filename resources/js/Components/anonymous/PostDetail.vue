@@ -434,18 +434,30 @@ const handleDelete = (id) => {
 }
 
 const submitReport = async () => {
-  if (!reportReasonCategory.value) { showReportError.value = true; return }
+  if (!reportReasonCategory.value) {
+    showReportError.value = true;
+    return;
+  }
+
   try {
     await axios.post("/api/report", {
       target_id: reportTargetId.value,
       type: reportType.value,
       reason: reportReasonCategory.value,
       details: reportDetails.value,
-    })
-    showToast("Report submitted.")
-    Modal.getInstance(reportModal.value).hide()
-  } catch (err) { showToast("Failed to report.", "error") }
-}
+    });
+
+    showToast("Report submitted.");
+    Modal.getInstance(reportModal.value).hide();
+
+  } catch (err) {
+    if (err.response && err.response.data && err.response.data.message) {
+      showToast(err.response.data.message, "error");
+    } else {
+      showToast("Failed to report.", "error");
+    }
+  }
+};
 
 const handleReply = async ({ parent_id, content }) => {
   if (!content?.trim()) return

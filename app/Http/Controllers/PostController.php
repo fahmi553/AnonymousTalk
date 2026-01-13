@@ -123,27 +123,21 @@ class PostController extends Controller
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
                 $confidence = $aiResult['confidence'];
+
                 if ($sentimentLabel === 'NEGATIVE') {
                     $isToxic = true;
                     $status = 'moderated';
                 }
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
-
-            \App\Models\TrustScoreLog::create([
-                'user_id'      => auth()->id(),
-                'action_type'  => 'system_warning',
-                'score_change' => 0,
-                'reason'       => 'Sentiment AI Offline - Post allowed without check',
-            ]);
+            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline: " . $e->getMessage());
         }
 
         if (!$isToxic && $user->trust_score < 30) {
-           $status = 'pending';
+        $status = 'pending';
         }
 
-        $post = Post::create([
+        $post = \App\Models\Post::create([
             'user_id'         => auth()->id(),
             'category_id'     => $request->category_id,
             'title'           => $request->title,
@@ -152,39 +146,40 @@ class PostController extends Controller
             'status'          => $status,
         ]);
 
-        PostSentimentLog::create([
+        \App\Models\PostSentimentLog::create([
             'post_id'         => $post->post_id,
             'sentiment_score' => $confidence,
             'result'          => $sentimentLabel,
             'created_at'      => now(),
         ]);
 
-        $user = $post->user;
+        if ($isToxic) {
+            \App\Models\Report::create([
+                'reporter_id'     => null,
+                'reportable_id'   => $post->post_id,
+                'reportable_type' => \App\Models\Post::class,
+                'reason'          => 'High Negative Sentiment',
+                'details'         => "AI detected toxic post content (" . round($confidence * 100, 1) . "%).",
+                'status'          => 'pending',
+            ]);
 
-       if ($isToxic) {
-           \App\Models\Report::create([
-               'reporter_id'     => null,
-               'reportable_id'   => $post->post_id,
-               'reportable_type' => Post::class,
-               'reason'          => 'High Negative Sentiment',
-               'details'         => "AI detected toxic post content (" . round($confidence * 100, 1) . "%).",
-               'status'          => 'pending',
-           ]);
+            $user->applyTrustChange(
+                -2,
+                'Toxic Post Flagged',
+                'ai_moderation'
+            );
 
-           $user->applyTrustChange(User::TRUST_SCORE_POST_PENALTY, 'Toxic Post Flagged', 'ai_moderation');
-       }
-       elseif ($status === 'published') {
-           $user->applyTrustChange(User::TRUST_SCORE_POST_REWARD, 'Post Submitted', 'post_reward');
-       }
-
-        $user->updateBadges();
+        } elseif ($status === 'published') {
+            $user->applyTrustChange(2, 'Post Submitted', 'post_reward');
+        }
 
         return response()->json([
-           'message' => $isToxic ? '⚠️ Post submitted but held for moderation.'
-                                 : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
-           'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
-           'post'    => $post
-       ]);
+        'message' => $isToxic
+                ? '⚠️ Post flagged as toxic. -2 Trust Score applied.'
+                : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
+        'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
+        'post'    => $post
+        ]);
     }
 
     public function destroy($id)

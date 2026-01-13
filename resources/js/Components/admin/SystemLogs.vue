@@ -47,13 +47,13 @@
 
                 <td>
                   <span
-                    class="badge"
-                    :class="{
-                      'text-bg-success': log.action_type === 'reward' || log.action_type === 'post_approved',
+                  class="badge"
+                  :class="{
+                      'text-bg-success': log.action_type === 'reward' || log.action_type === 'post_approved' || log.action_type === 'comment_approved',
                       'text-bg-danger': log.action_type === 'ban' || log.action_type === 'post_flagged',
                       'text-bg-warning': log.action_type === 'warn' || log.action_type === 'admin_adjustment',
-                      'text-bg-secondary': !['reward', 'ban', 'warn', 'post_approved', 'post_flagged'].includes(log.action_type)
-                    }"
+                      'text-bg-secondary': !['reward', 'ban', 'warn', 'post_approved', 'comment_approved', 'post_flagged', 'admin_adjustment'].includes(log.action_type)
+                  }"
                   >
                     {{ formatAction(log.action_type) }}
                   </span>

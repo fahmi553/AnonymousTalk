@@ -77,12 +77,14 @@ class CommentController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+
         if ($user->trust_score < 10) {
             return response()->json([
                 'message' => 'Your trust score is too low to comment (Minimum 10%).',
                 'status' => 'error'
             ], 403);
         }
+
         $request->validate([
             'post_id'   => 'required|exists:posts,post_id',
             'content'   => 'required|string|max:1000',
@@ -100,6 +102,7 @@ class CommentController extends Controller
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
                 $confidence = $aiResult['confidence'];
+
                 if ($sentimentLabel === 'NEGATIVE') {
                     $isToxic = true;
                     $status = 'moderated';
@@ -107,13 +110,6 @@ class CommentController extends Controller
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
-
-            \App\Models\TrustScoreLog::create([
-                'user_id'      => auth()->id(),
-                'action_type'  => 'system_warning',
-                'score_change' => 0,
-                'reason'       => 'Sentiment AI Offline - Post allowed without check',
-            ]);
         }
 
         $comment = Comment::create([
@@ -125,14 +121,12 @@ class CommentController extends Controller
             'status'          => $status,
         ]);
 
-        CommentSentimentLog::create([
+        \App\Models\CommentSentimentLog::create([
             'comment_id'      => $comment->comment_id,
             'sentiment_score' => $confidence,
             'result'          => $sentimentLabel,
             'created_at'      => now(),
         ]);
-
-        $user = $comment->user;
 
         if ($isToxic) {
             \App\Models\Report::create([
@@ -143,32 +137,28 @@ class CommentController extends Controller
                 'details'         => "AI detected toxic comment (" . round($confidence * 100, 1) . "%).",
                 'status'          => 'pending',
             ]);
-
-            $user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Toxic comment detected by AI', 'ai_moderation');
+            $user->applyTrustChange(
+                -1,
+                'Toxic comment detected by AI',
+                'ai_moderation'
+            );
         } else {
-            $post = Post::find($request->post_id);
+            $post = \App\Models\Post::find($request->post_id);
             $isSelfComment = $post->user_id === auth()->id();
 
             if (!$isSelfComment) {
-                $user->applyTrustChange(User::TRUST_SCORE_COMMENT_REWARD, 'Comment posted', 'comment_reward');
-            } else {
+                $user->applyTrustChange(1, 'Comment posted', 'comment_reward');
             }
-
-        $user->updateBadges();
-
-        $post = Post::find($request->post_id);
-
+        }
+        $post = \App\Models\Post::find($request->post_id);
         if ($post && !$isToxic) {
-
             if ($request->parent_id) {
                 $parentComment = Comment::find($request->parent_id);
-
                 if ($parentComment && $parentComment->user_id !== auth()->id()) {
-                    $parentComment->user->notify(new NewCommentNotification(auth()->user(), $post, $parentComment));
+                    $parentComment->user->notify(new \App\Notifications\NewCommentNotification(auth()->user(), $post, $parentComment));
                 }
-            }
-            elseif ($post->user_id !== auth()->id()) {
-                $post->user->notify(new NewCommentNotification(auth()->user(), $post));
+            } elseif ($post->user_id !== auth()->id()) {
+                $post->user->notify(new \App\Notifications\NewCommentNotification(auth()->user(), $post));
             }
         }
 
@@ -179,10 +169,11 @@ class CommentController extends Controller
         return response()->json([
             'data' => $responsePayload,
             'is_flagged' => $isToxic,
-            'message' => $isToxic ? 'Comment submitted but held for moderation.' : 'Comment posted successfully!'
+            'message' => $isToxic
+                ? '⚠️ Comment flagged as toxic. -1 Trust Score applied.'
+                : 'Comment posted successfully!'
         ]);
     }
-
 
     public function destroy($id)
     {
