@@ -205,21 +205,28 @@
              </div>
 
              <div v-else class="d-flex flex-column gap-3">
-                 <div v-for="post in posts" :key="post.post_id" class="card border border-secondary-subtle shadow-sm rounded-4 overflow-hidden card-hover bg-body" :class="{ 'border-warning border-2': post.hidden_in_profile }">
-                     <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start">
-                             <router-link :to="`/posts/${post.post_id}`" class="h5 fw-bold text-decoration-none text-body-emphasis mb-2 d-block stretched-link">{{ post.title || "Untitled Post" }}</router-link>
-                             <button v-if="isSelf" class="btn btn-sm rounded-pill position-relative z-2 ms-2" :class="post.hidden_in_profile ? 'btn-warning' : 'btn-light border'" @click.stop="togglePostVisibility(post.post_id)">
-                                <i :class="post.hidden_in_profile ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                             </button>
-                        </div>
-                        <div class="d-flex gap-3 text-muted small mt-2">
-                             <span><i class="far fa-comment me-1"></i>{{ post.comments_count ?? 0 }}</span>
-                             <span><i class="far fa-heart me-1"></i>{{ post.likes_count ?? 0 }}</span>
-                             <span><i class="far fa-calendar me-1"></i>{{ formatDate(post.created_at) }}</span>
-                        </div>
-                     </div>
-                 </div>
+                 <div v-for="post in posts" :key="post.post_id"
+                        class="card border border-secondary-subtle shadow-sm rounded-4 overflow-hidden card-hover bg-body"
+                        :class="{ 'border-warning border-2': post.hidden_in_profile || user.hide_all_posts }"> <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <router-link :to="`/posts/${post.post_id}`" class="h5 fw-bold text-decoration-none text-body-emphasis mb-2 d-block stretched-link">
+                                    {{ post.title || "Untitled Post" }}
+                                </router-link>
+
+                                <button v-if="isSelf"
+                                        class="btn btn-sm rounded-pill position-relative z-2 ms-2"
+                                        :class="(post.hidden_in_profile || user.hide_all_posts) ? 'btn-warning' : 'btn-light border'"
+                                        @click.stop="togglePostVisibility(post.post_id)"
+                                        :disabled="user.hide_all_posts"> <i :class="(post.hidden_in_profile || user.hide_all_posts) ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                              </button>
+                              </div>
+
+                            <div v-if="isSelf && user.hide_all_posts" class="text-warning small fw-bold mt-1">
+                                <i class="fas fa-lock me-1"></i> Globally Hidden
+                           </div>
+
+                          </div>
+                  </div>
                  <PaginationControls v-if="postsMeta.last_page > 1" :meta="postsMeta" @page-change="fetchPosts" class="mt-3" />
              </div>
         </div>
@@ -579,12 +586,24 @@ const fetchComments = async (page = 1) => {
 const debouncedSearchPosts = debounce(() => fetchPosts(1), 400);
 
 const togglePostVisibility = async (id) => {
+  const post = posts.value.find((p) => p.post_id === id);
+  if (!post) return;
+
+  const originalState = post.hidden_in_profile;
+
+  post.hidden_in_profile = !post.hidden_in_profile;
+
   try {
     const res = await axios.patch(`/api/posts/${id}/toggle-profile-visibility`);
-    const post = posts.value.find((p) => p.post_id === id);
-    if (post) post.hidden_in_profile = res.data.hidden_in_profile;
+
+    post.hidden_in_profile = res.data.hidden_in_profile;
+
   } catch (err) {
     console.error("Error toggling post visibility:", err);
+    post.hidden_in_profile = originalState;
+
+    toastMessage.value = "Failed to update post visibility.";
+    showToast.value = true;
   }
 };
 
@@ -593,14 +612,17 @@ const toggleHideAll = async () => {
     loadingPostsToggle.value = true;
     const res = await axios.post("/api/profile/toggle-hide-all-posts");
 
-    user.value.hide_all_posts = res.data.hide_all_posts;
-    posts.value.forEach((p) => (p.hidden_in_profile = user.value.hide_all_posts));
+    if (user.value) {
+        user.value.hide_all_posts = res.data.hide_all_posts;
+    }
 
     toastMessage.value = res.data.message;
     showToast.value = true;
     setTimeout(() => (showToast.value = false), 3000);
+
   } catch (err) {
-    console.error("Error toggling posts visibility:", err);
+    console.error("Error toggling global visibility:", err);
+    error.value = "Failed to update visibility settings.";
   } finally {
     loadingPostsToggle.value = false;
   }

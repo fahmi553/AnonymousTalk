@@ -58,11 +58,14 @@ class GoogleController extends Controller
 
                 if (!empty($updates)) {
                     $user->update($updates);
-
                     if ($wasUnverified) {
                         event(new Verified($user));
                     }
                 }
+            }
+
+            if ($user->banned_at) {
+                return redirect('/login')->with('error', 'Your account has been banned: ' . ($user->ban_reason ?? 'Violation of terms.'));
             }
 
             Auth::login($user);

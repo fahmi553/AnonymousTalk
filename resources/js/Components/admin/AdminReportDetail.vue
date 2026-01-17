@@ -85,9 +85,11 @@
           </h6>
         </div>
         <div class="list-group list-group-flush">
+
           <div v-if="reportData.reports.length === 0" class="p-4 text-center text-muted fst-italic">
-              Automated system flag only. No user reports.
-          </div>
+            <i class="fas fa-check-circle me-2"></i>
+            <span>No active reports found for this content.</span>
+        </div>
           <div v-for="report in reportData.reports" :key="report.id" class="list-group-item bg-body px-4 py-3">
             <div class="d-flex justify-content-between align-items-start mb-1">
                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
@@ -220,7 +222,9 @@ const modalBody = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await axios.get(`/api/admin/report-details/${id}`);
+    const typeParam = route.query.type || '';
+    const res = await axios.get(`/api/admin/report-details/${id}?type=${typeParam}`);
+
     reportData.value = res.data;
   } catch (err) {
     console.error("Failed to load report details:", err);

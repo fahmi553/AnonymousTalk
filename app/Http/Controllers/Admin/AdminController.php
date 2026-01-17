@@ -104,43 +104,58 @@ class AdminController extends Controller
         ];
     }
 
-    public function showReportDetails($id)
+    public function showReportDetails(Request $request, $id)
     {
-        $post = Post::with('categoryModel')->find($id);
+        $type = $request->query('type');
+
+        $post = null;
+        $comment = null;
+
+        if ($type === 'posts' || !$type) {
+             $post = \App\Models\Post::with('categoryModel')->find($id);
+        }
+
         if ($post) {
-            $reports = Report::with('reporter:user_id,username')
-                ->where('reportable_type', Post::class)
+            $reports = \App\Models\Report::with('reporter:user_id,username')
+                ->where('reportable_type', \App\Models\Post::class)
                 ->where('reportable_id', $id)
                 ->get();
 
             return response()->json([
                 'type' => 'Post',
                 'content' => [
+                    'id' => $post->post_id,
                     'title' => $post->title,
                     'body' => $post->content,
                     'category' => $post->categoryModel->name ?? 'None',
                     'author' => $post->user->username ?? 'Anonymous',
                     'status' => $post->status,
+                    'created_at' => $post->created_at,
                 ],
                 'reports' => $reports
             ]);
         }
 
-        $comment = Comment::with('user', 'post')->find($id);
+        if ($type === 'comments' || !$type) {
+            $comment = \App\Models\Comment::with('user', 'post')->find($id);
+        }
+
         if ($comment) {
-            $reports = Report::with('reporter:user_id,username')
-                ->where('reportable_type', Comment::class)
+            $reports = \App\Models\Report::with('reporter:user_id,username')
+                ->where('reportable_type', \App\Models\Comment::class)
                 ->where('reportable_id', $id)
                 ->get();
 
             return response()->json([
                 'type' => 'Comment',
                 'content' => [
+                    'id' => $comment->comment_id,
                     'title' => 'Comment on Post #' . $comment->post_id,
                     'body' => $comment->content,
                     'category' => 'Comment',
                     'author' => $comment->user->username ?? 'Unknown',
                     'status' => $comment->status,
+                    'created_at' => $comment->created_at,
                 ],
                 'reports' => $reports
             ]);

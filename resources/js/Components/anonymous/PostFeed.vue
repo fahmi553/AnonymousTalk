@@ -147,7 +147,7 @@
                 <div>
                   <h6 class="fw-bold text-body-emphasis mb-0">
                     {{ post.user?.username || 'Anonymous' }}
-                    <span v-if="post.user?.user_id === authUser?.user_id" class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.6rem;">YOU</span>
+                    <span v-if="authUser && post.user?.user_id === authUser.user_id" class="badge bg-primary-subtle text-primary ms-1" style="font-size: 0.6rem;">YOU</span>
                   </h6>
                   <small class="text-secondary" style="font-size: 0.75rem;">
                     {{ formatDate(post.created_at) }} &bull; {{ post.category }}

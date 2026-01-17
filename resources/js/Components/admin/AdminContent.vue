@@ -307,11 +307,12 @@ const getActionButtonClass = (action) => {
 
 const viewDetails = (item) => {
     const id = getId(item);
-    if (activeType.value === 'posts') {
-        router.push(`/posts/${id}`);
-    } else {
-        router.push(`/posts/${item.post_id}`);
-    }
+    const typeQuery = activeType.value === 'posts' ? 'posts' : 'comments';
+
+    router.push({
+        path: `/admin/report/${id}`,
+        query: { type: typeQuery }
+    });
 };
 
 watch([activeType, filterStatus], () => {

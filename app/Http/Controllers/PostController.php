@@ -27,6 +27,12 @@ class PostController extends Controller
 
         $query->where('status', 'published');
 
+        $query->whereDoesntHave('user', function ($q) {
+            $q->where('hide_all_posts', true);
+        });
+
+        $query->where('hidden_in_profile', false);
+
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
@@ -175,7 +181,7 @@ class PostController extends Controller
 
         return response()->json([
         'message' => $isToxic
-                ? '⚠️ Post flagged as toxic. -2 Trust Score applied.'
+                ? 'Post flagged as toxic. -2 Trust Score applied.'
                 : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
         'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
         'post'    => $post

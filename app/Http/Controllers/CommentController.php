@@ -170,7 +170,7 @@ class CommentController extends Controller
             'data' => $responsePayload,
             'is_flagged' => $isToxic,
             'message' => $isToxic
-                ? '⚠️ Comment flagged as toxic. -1 Trust Score applied.'
+                ? 'Comment flagged as toxic. -1 Trust Score applied.'
                 : 'Comment posted successfully!'
         ]);
     }

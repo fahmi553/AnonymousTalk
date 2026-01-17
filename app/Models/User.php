@@ -31,11 +31,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'can_post',
         'can_comment',
         'avatar',
+        'hidden_in_profile',
     ];
 
     protected $appends = ['avatar_url'];
 
     protected $casts = [
+        'hidden_in_profile',
         'hide_all_posts' => 'boolean',
         'hide_all_comments' => 'boolean',
         'can_post' => 'boolean',
@@ -94,8 +96,17 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->trust_score === 0 && is_null($this->banned_at)) {
             $this->banned_at = now();
             $this->ban_reason = "System Auto-Ban: Trust Score reached 0%.";
+            $this->ban = 1;
 
             $reason .= " (User Banned)";
+        }
+
+        elseif ($this->trust_score > 0 && !is_null($this->banned_at)) {
+            $this->banned_at = null;
+            $this->ban_reason = null;
+            $this->ban = 0;
+
+            $reason .= " (Auto-Unbanned: Score > 0)";
         }
 
         $this->save();
@@ -155,8 +166,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $allBadges = \App\Models\Badge::all();
         $trustBadges = $allBadges->where('trust_threshold', '>', 0);
         $behaviorBadges = $allBadges->where('trust_threshold', 0);
-
-        $negativeBadgeNames = ['Toxic', 'Under Review', 'Warned', 'Banned'];
+        $negativeBadgeNames = ['Toxic', 'Under Review', 'Warned', 'Banned', 'On Probation'];
 
         $this->updateTrustBadges($trustBadges);
         $this->updateBehaviorBadges($behaviorBadges, $beforeBadgeIds);
