@@ -34,6 +34,15 @@
                   <span><i class="fas fa-fire me-3 text-danger"></i>Trending</span>
                   <i v-if="filter === 'trending'" class="fas fa-check text-primary"></i>
                 </button>
+                <button
+                    v-if="authUser"
+                    class="list-group-item list-group-item-action border-0 py-3 px-4 d-flex align-items-center justify-content-between"
+                    :class="{ 'active-filter': filter === 'liked' }"
+                    @click="setFilter('liked')"
+                >
+                    <span><i class="fas fa-heart me-3 text-danger"></i>Liked Posts</span>
+                    <i v-if="filter === 'liked'" class="fas fa-check text-primary"></i>
+                </button>
               </div>
             </div>
 

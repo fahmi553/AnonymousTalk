@@ -37,6 +37,12 @@ class PostController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        if ($request->input('filter') === 'liked' && auth()->check()) {
+            $query->whereHas('likes', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(fn($q) => $q->where('title', 'like', "%{$searchTerm}%")
