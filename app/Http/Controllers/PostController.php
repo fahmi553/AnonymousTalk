@@ -43,6 +43,24 @@ class PostController extends Controller
             });
         }
 
+        if ($request->input('filter') === 'trending') {
+            $query->where('created_at', '>=', now()->subHours(72));
+
+            $query->orderBy('comments_count', 'desc')
+                ->orderBy('likes_count', 'desc');
+        }
+        else {
+            if ($request->filled('sort')) {
+                match($request->sort) {
+                    'asc' => $query->orderBy('created_at', 'asc'),
+                    'most_commented' => $query->orderBy('comments_count', 'desc'),
+                    default => $query->orderBy('created_at', 'desc')
+                };
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+        }
+
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(fn($q) => $q->where('title', 'like', "%{$searchTerm}%")
