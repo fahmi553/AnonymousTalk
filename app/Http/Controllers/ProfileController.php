@@ -331,17 +331,20 @@ class ProfileController extends Controller
             DB::transaction(function () use ($user) {
                 $user->posts()->delete();
                 $user->comments()->delete();
-
                 DB::table('likes')->where('user_id', $user->user_id)->delete();
-
                 DB::table('notifications')->where('notifiable_id', $user->user_id)->delete();
-
                 $user->trustScoreLogs()->delete();
                 $user->badges()->detach();
                 $user->reportsFiled()->delete();
                 $user->delete();
                 $user->tokens()->delete();
+                $user->delete();
+                $user->tokens()->delete();
             });
+
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
             return response()->json(['message' => 'Account deleted successfully.']);
 
