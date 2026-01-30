@@ -192,13 +192,16 @@ class CommentController extends Controller
 
     private function deleteWithReplies($comment)
     {
-        $comment->load('user', 'replies.user');
+        $comment->load('user', 'replies.user', 'post');
 
         foreach ($comment->replies as $reply) {
             $this->deleteWithReplies($reply);
         }
-
-        if ($comment->user) {
+        $isSelfComment = false;
+        if ($comment->post) {
+            $isSelfComment = ($comment->user_id === $comment->post->user_id);
+        }
+        if ($comment->user && !$isSelfComment) {
             $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Comment Deleted');
             $comment->user->updateBadges();
         }

@@ -243,13 +243,9 @@ class PostController extends Controller
             $this->deleteCommentRecursively($reply, $targetUserId);
         }
 
-        if ($comment->user_id === $targetUserId && $comment->user) {
-            $comment->user->applyTrustChange(User::TRUST_SCORE_COMMENT_PENALTY, 'Own Comment Deleted with Post', 'comment_penalty');
-            $comment->user->updateBadges();
-        }
-
         $comment->delete();
     }
+
     public function updateStatus(Request $request, Post $post)
     {
         $request->validate(['status' => ['required', Rule::in(Post::STATUSES)]]);

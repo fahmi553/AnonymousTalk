@@ -36,7 +36,7 @@ Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) 
         event(new Verified($user));
     }
 
-    return redirect(config('app.url') . '/profile?verified=true');
+    return redirect('/feed?verified=1');
 
 })->middleware(['signed'])->name('verification.verify');
 

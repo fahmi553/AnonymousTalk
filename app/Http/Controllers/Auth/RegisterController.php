@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\UsernameGenerator;
+use Illuminate\Auth\Events\Registered;
 
 class RegisterController extends Controller
 {
@@ -36,8 +37,8 @@ class RegisterController extends Controller
             'role'        => 'user',
         ]);
 
+        event(new Registered($user));
         Auth::login($user);
-
-        return redirect('/login');
+        return redirect('/')->with('success', 'Registration successful! Please check your email.');
     }
 }
