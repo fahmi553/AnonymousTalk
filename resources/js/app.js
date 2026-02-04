@@ -4,6 +4,7 @@ import '../css/app.css'
 import axios from 'axios'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import App from './App.vue';
 import PostForm from './Components/anonymous/PostForm.vue'
 import PostFeed from './Components/anonymous/PostFeed.vue'
 import CommentForm from './Components/anonymous/CommentForm.vue'
@@ -30,11 +31,13 @@ import HelpCenter from './Components/pages/HelpCenter.vue';
 import DiscussionFeed from './Components/pages/DiscussionFeed.vue'
 import CookiePolicy from './Components/pages/CookiePolicy.vue';
 import AdminContent from './Components/admin/AdminContent.vue';
-import ForgotPassword from './Components/auth/ForgotPassword.vue';
-import ResetPassword from './Components/auth/ResetPassword.vue';
+// import ForgotPassword from './Components/auth/ForgotPassword.vue';
+// import ResetPassword from './Components/auth/ResetPassword.vue';
+// import Login from './Components/auth/Login.vue'
+// import Register from './Components/auth/Register.vue'
+// import ConfirmPassword from './Components/auth/ConfirmPassword.vue'
 import VerificationAlert from './Components/VerificationAlert.vue';
-import Login from './Components/auth/Login.vue'
-import Register from './Components/auth/Register.vue'
+import { useAuth } from './store/auth';
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -55,11 +58,12 @@ const routes = [
   { path: '/help', component: HelpCenter, name: 'HelpCenter' },
   { path: '/cookies', component: CookiePolicy, name: 'CookiePolicy' },
   { path: '/feed', component: DiscussionFeed, name: 'DiscussionFeed' },
-  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guest: true } },
-  { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { guest: true } },
+//   { path: '/login', component: Login, name: 'Login', meta: { guest: true, hideSidebar: true } },
+//   { path: '/register', component: Register, name: 'Register', meta: { guest: true, hideSidebar: true } },
+//   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guest: true, hideSidebar: true } },
+//   { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { guest: true, hideSidebar: true } },
+//   { path: '/confirm-password', component: ConfirmPassword, name: 'ConfirmPassword', meta: { hideSidebar: true } },
   { path: '/admin/content', component: AdminContent, name: 'AdminContent', meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/login', component: Login, name: 'Login' },
-  { path: '/register', component: Register, name: 'Register' },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
@@ -68,56 +72,59 @@ const router = createRouter({
   routes,
 })
 
-axios.defaults.withCredentials = true
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
-const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-if (token) {
-  axios.defaults.headers.common['X-CSRF-TOKEN'] = token
-}
+axios.defaults.withCredentials = true;
+axios.defaults.withXSRFToken = true;
+axios.defaults.baseURL = '/';
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.headers.common['Accept'] = 'application/json';
 
 axios.interceptors.response.use(
     response => response,
     error => {
-        if (window.location.pathname === '/login' || window.location.pathname === '/admin/login') {
+        const currentPath = window.location.pathname;
+        if (currentPath === '/login' || currentPath === '/admin/login') {
             return Promise.reject(error);
         }
 
         if (error.response) {
             const status = error.response.status;
-            const originalRequest = error.config;
-
-            if (status === 419) {
+            if ((status === 419 || status === 401)) {
+                localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
                 return Promise.reject(error);
             }
-
-            if (status === 401) {
-                if (originalRequest.url.includes('/user') || originalRequest.url.includes('/api/user')) {
-                    return Promise.reject(error);
-                }
-
+            if (status === 403 && error.response.data.banned) {
+                alert(error.response.data.message);
+                localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
-            }
-
-            if (status === 403) {
+                return Promise.reject(error);
             }
         }
         return Promise.reject(error);
     }
 );
 
-const app = createApp({})
+const app = createApp(App)
+const { fetchUser } = useAuth();
+
 app.use(router)
 app.component('comment-form', CommentForm)
 app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
 app.component('app-sidebar', AppSidebar)
 app.component('verification-alert', VerificationAlert);
-
-app.mount('#app')
-const headerApp = createApp(AppHeader)
-headerApp.use(router)
-headerApp.mount('#app-header')
-const footerApp = createApp(AppFooter)
-footerApp.use(router)
-footerApp.mount('#app-footer')
+function mountApps() {
+    if (!app._container) {
+        app.mount('#app');
+        createApp(AppHeader).use(router).mount('#app-header');
+        createApp(AppFooter).use(router).mount('#app-footer');
+    }
+}
+axios.get('/sanctum/csrf-cookie').then(() => {
+    fetchUser()
+        .then(() => mountApps())
+        .catch(() => mountApps());
+}).catch((err) => {
+    console.error("CSRF Handshake failed. Check CORS settings.", err);
+    mountApps();
+});
