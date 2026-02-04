@@ -1,13 +1,19 @@
 body {
-    background-color: #f5f6f8;
+    background-color: var(--bs-body-bg);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #222;
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] label,
+[data-bs-theme="dark"] .form-label {
+    color: #ffffff !important;
 }
 
 .main-content {
     flex: 1;
     padding-top: 20px;
 }
+
 .header {
     background-color: #0d6efd;
     color: white;
@@ -20,13 +26,14 @@ body {
     font-size: 1.5rem;
     margin-bottom: 5px;
 }
+
 .feed-container {
     max-width: 600px;
     margin: 0 auto;
 }
 .post-card {
-    background: white;
-    border: 1px solid #e6ecf0;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
     border-radius: 12px;
     padding: 15px;
     margin-bottom: 15px;
@@ -34,82 +41,67 @@ body {
 }
 
 .post-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.post-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .post-header .username {
     font-weight: bold;
     margin-right: 5px;
+    color: var(--bs-emphasis-color);
 }
 
 .post-header .time {
-    color: #657786;
+    color: var(--bs-secondary-color);
     font-size: 0.9rem;
 }
 
 .post-content {
     font-size: 1rem;
     margin-bottom: 10px;
+    color: var(--bs-body-color);
 }
+
 .comment-section {
     margin-top: 10px;
-    border-top: 1px solid #e6ecf0;
+    border-top: 1px solid var(--bs-border-color);
     padding-top: 10px;
 }
 
 .comment {
     padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--bs-border-color);
     font-size: 0.95rem;
+    color: var(--bs-body-color);
 }
 
 .comment strong {
     font-weight: bold;
     margin-right: 5px;
-}
-.comment-form {
-    display: flex;
-    gap: 5px;
-    margin-top: 10px;
+    color: var(--bs-emphasis-color);
 }
 
 .comment-form input {
     flex: 1;
     border-radius: 20px;
     padding: 8px 12px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
 }
 
-.comment-form button {
-    background: #0d6efd;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 16px;
-    cursor: pointer;
-}
-
-.comment-form button:hover {
-    background: #0b5ed7;
-}
 .footer {
-    background-color: white;
-    border-top: 1px solid #ddd;
+    background-color: var(--bs-body-bg);
+    border-top: 1px solid var(--bs-border-color);
     text-align: center;
     padding: 15px;
-    color: #666;
+    color: var(--bs-secondary-color);
     font-size: 14px;
 }
+
 .sidebar-link {
     display: block;
     padding: 6px 0;
-    color: #333;
+    color: var(--bs-body-color);
     text-decoration: none;
     transition: color 0.2s ease;
 }
