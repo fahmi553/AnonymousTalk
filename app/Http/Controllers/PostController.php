@@ -146,7 +146,7 @@ class PostController extends Controller
         $confidence = 0.0;
         $isToxic = false;
         $status = 'published';
-        $aiUrl = env('AI_URL', 'https://python-ai-deploy.onrender.com');
+        $aiUrl = env('AI_URL', 'https://fahmi553-anonymous-talk-ai.hf.space');
 
         try {
             $response = Http::timeout(65)->post($aiUrl . '/analyze', [
