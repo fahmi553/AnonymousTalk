@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+        $middleware->statefulApi();
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
@@ -19,10 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckBanned::class,
         ]);
 
-        $middleware->api(prepend: [
-             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ], append: [
-             \App\Http\Middleware\CheckBanned::class,
+        $middleware->api(append: [
+            \App\Http\Middleware\CheckBanned::class,
         ]);
 
         $middleware->alias([
