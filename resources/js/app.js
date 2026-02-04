@@ -33,6 +33,8 @@ import AdminContent from './Components/admin/AdminContent.vue';
 import ForgotPassword from './Components/auth/ForgotPassword.vue';
 import ResetPassword from './Components/auth/ResetPassword.vue';
 import VerificationAlert from './Components/VerificationAlert.vue';
+import Login from './Components/auth/Login.vue'
+import Register from './Components/auth/Register.vue'
 
 const routes = [
   { path: '/', component: PostFeed },
@@ -56,6 +58,8 @@ const routes = [
   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guest: true } },
   { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { guest: true } },
   { path: '/admin/content', component: AdminContent, name: 'AdminContent', meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/login', component: Login, name: 'Login' },
+  { path: '/register', component: Register, name: 'Register' },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
