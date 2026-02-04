@@ -4,7 +4,7 @@ import '../css/app.css'
 import axios from 'axios'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import App from './App.vue';
+
 import PostForm from './Components/anonymous/PostForm.vue'
 import PostFeed from './Components/anonymous/PostFeed.vue'
 import CommentForm from './Components/anonymous/CommentForm.vue'
@@ -31,11 +31,6 @@ import HelpCenter from './Components/pages/HelpCenter.vue';
 import DiscussionFeed from './Components/pages/DiscussionFeed.vue'
 import CookiePolicy from './Components/pages/CookiePolicy.vue';
 import AdminContent from './Components/admin/AdminContent.vue';
-// import ForgotPassword from './Components/auth/ForgotPassword.vue';
-// import ResetPassword from './Components/auth/ResetPassword.vue';
-// import Login from './Components/auth/Login.vue'
-// import Register from './Components/auth/Register.vue'
-// import ConfirmPassword from './Components/auth/ConfirmPassword.vue'
 import VerificationAlert from './Components/VerificationAlert.vue';
 import { useAuth } from './store/auth';
 
@@ -58,11 +53,6 @@ const routes = [
   { path: '/help', component: HelpCenter, name: 'HelpCenter' },
   { path: '/cookies', component: CookiePolicy, name: 'CookiePolicy' },
   { path: '/feed', component: DiscussionFeed, name: 'DiscussionFeed' },
-//   { path: '/login', component: Login, name: 'Login', meta: { guest: true, hideSidebar: true } },
-//   { path: '/register', component: Register, name: 'Register', meta: { guest: true, hideSidebar: true } },
-//   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guest: true, hideSidebar: true } },
-//   { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { guest: true, hideSidebar: true } },
-//   { path: '/confirm-password', component: ConfirmPassword, name: 'ConfirmPassword', meta: { hideSidebar: true } },
   { path: '/admin/content', component: AdminContent, name: 'AdminContent', meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
@@ -103,8 +93,7 @@ axios.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-const app = createApp(App)
+const app = createApp({})
 const { fetchUser } = useAuth();
 
 app.use(router)
@@ -113,6 +102,7 @@ app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
 app.component('app-sidebar', AppSidebar)
 app.component('verification-alert', VerificationAlert);
+
 function mountApps() {
     if (!app._container) {
         app.mount('#app');
@@ -120,6 +110,7 @@ function mountApps() {
         createApp(AppFooter).use(router).mount('#app-footer');
     }
 }
+
 axios.get('/sanctum/csrf-cookie').then(() => {
     fetchUser()
         .then(() => mountApps())
