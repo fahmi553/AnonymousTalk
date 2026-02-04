@@ -14,9 +14,9 @@ import { ref, onMounted, watch } from 'vue'
 const theme = ref(localStorage.getItem('theme') || 'light')
 
 const applyTheme = (mode) => {
-  // This logic is correct: it only sets the attribute
-  document.documentElement.setAttribute('data-bs-theme', mode)
-  localStorage.setItem('theme', mode)
+  document.documentElement.setAttribute('data-bs-theme', mode);
+  document.documentElement.classList.toggle('dark', mode === 'dark');
+  localStorage.setItem('theme', mode);
 }
 
 const toggleTheme = () => {

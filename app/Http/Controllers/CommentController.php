@@ -96,8 +96,11 @@ class CommentController extends Controller
         $isToxic = false;
         $status = 'published';
 
+        $aiUrl = env('AI_URL', 'https://python-ai-deploy.onrender.com');
+
         try {
-            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', ['text' => $request->content]);
+            $response = Http::timeout(5)->post($aiUrl . '/analyze', ['text' => $request->content]);
+
             if ($response->successful()) {
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
@@ -109,7 +112,7 @@ class CommentController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline");
+            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline: " . $e->getMessage());
         }
 
         $comment = Comment::create([
@@ -137,11 +140,7 @@ class CommentController extends Controller
                 'details'         => "AI detected toxic comment (" . round($confidence * 100, 1) . "%).",
                 'status'          => 'pending',
             ]);
-            $user->applyTrustChange(
-                -1,
-                'Toxic comment detected by AI',
-                'ai_moderation'
-            );
+            $user->applyTrustChange(-1, 'Toxic comment detected by AI', 'ai_moderation');
         } else {
             $post = \App\Models\Post::find($request->post_id);
             $isSelfComment = $post->user_id === auth()->id();
@@ -150,24 +149,9 @@ class CommentController extends Controller
                 $user->applyTrustChange(1, 'Comment posted', 'comment_reward');
             }
         }
-        $post = \App\Models\Post::find($request->post_id);
-        if ($post && !$isToxic) {
-            if ($request->parent_id) {
-                $parentComment = Comment::find($request->parent_id);
-                if ($parentComment && $parentComment->user_id !== auth()->id()) {
-                    $parentComment->user->notify(new \App\Notifications\NewCommentNotification(auth()->user(), $post, $parentComment));
-                }
-            } elseif ($post->user_id !== auth()->id()) {
-                $post->user->notify(new \App\Notifications\NewCommentNotification(auth()->user(), $post));
-            }
-        }
-
-        $comment->load(['user', 'parentComment.user', 'replies']);
-
-        $responsePayload = $this->formatComment($comment);
 
         return response()->json([
-            'data' => $responsePayload,
+            'data' => $this->formatComment($comment->load(['user', 'parentComment.user', 'replies'])),
             'is_flagged' => $isToxic,
             'message' => $isToxic
                 ? 'Comment flagged as toxic. -1 Trust Score applied.'

@@ -146,9 +146,11 @@ class PostController extends Controller
         $confidence = 0.0;
         $isToxic = false;
         $status = 'published';
+        $aiUrl = env('AI_URL', 'https://python-ai-deploy.onrender.com');
 
         try {
-            $response = Http::timeout(2)->post('http://127.0.0.1:5000/analyze', ['text' => $textToAnalyze]);
+            $response = Http::timeout(5)->post($aiUrl . '/analyze', ['text' => $textToAnalyze]);
+
             if ($response->successful()) {
                 $aiResult = $response->json();
                 $sentimentLabel = $aiResult['result'];
@@ -164,7 +166,7 @@ class PostController extends Controller
         }
 
         if (!$isToxic && $user->trust_score < 30) {
-        $status = 'pending';
+            $status = 'pending';
         }
 
         $post = \App\Models\Post::create([
@@ -193,22 +195,18 @@ class PostController extends Controller
                 'status'          => 'pending',
             ]);
 
-            $user->applyTrustChange(
-                -2,
-                'Toxic Post Flagged',
-                'ai_moderation'
-            );
+            $user->applyTrustChange(-2, 'Toxic Post Flagged', 'ai_moderation');
 
         } elseif ($status === 'published') {
             $user->applyTrustChange(2, 'Post Submitted', 'post_reward');
         }
 
         return response()->json([
-        'message' => $isToxic
-                ? 'Post flagged as toxic. -2 Trust Score applied.'
-                : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
-        'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
-        'post'    => $post
+            'message' => $isToxic
+                    ? 'Post flagged as toxic. -2 Trust Score applied.'
+                    : ($status === 'pending' ? 'Post submitted for approval (Trust Score < 30%).' : 'Post created successfully!'),
+            'status'  => ($isToxic || $status === 'pending') ? 'warning' : 'success',
+            'post'    => $post
         ]);
     }
 
