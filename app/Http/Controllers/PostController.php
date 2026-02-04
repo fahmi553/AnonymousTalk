@@ -149,7 +149,9 @@ class PostController extends Controller
         $aiUrl = env('AI_URL', 'https://python-ai-deploy.onrender.com');
 
         try {
-            $response = Http::timeout(5)->post($aiUrl . '/analyze', ['text' => $textToAnalyze]);
+            $response = Http::timeout(65)->post($aiUrl . '/analyze', [
+                'text' => $textToAnalyze
+            ]);
 
             if ($response->successful()) {
                 $aiResult = $response->json();
@@ -162,7 +164,10 @@ class PostController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("Post AI Analysis Failed: " . $e->getMessage());
+
+            $sentimentLabel = 'UNKNOWN';
+            $confidence = 0.0;
         }
 
         if (!$isToxic && $user->trust_score < 30) {

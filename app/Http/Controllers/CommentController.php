@@ -99,7 +99,9 @@ class CommentController extends Controller
         $aiUrl = env('AI_URL', 'https://python-ai-deploy.onrender.com');
 
         try {
-            $response = Http::timeout(5)->post($aiUrl . '/analyze', ['text' => $request->content]);
+            $response = Http::timeout(65)->post($aiUrl . '/analyze', [
+                'text' => $request->content
+            ]);
 
             if ($response->successful()) {
                 $aiResult = $response->json();
@@ -112,7 +114,10 @@ class CommentController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Sentiment AI Offline: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("Comment AI Analysis Failed: " . $e->getMessage());
+
+            $sentimentLabel = 'UNKNOWN';
+            $confidence = 0.0;
         }
 
         $comment = Comment::create([
