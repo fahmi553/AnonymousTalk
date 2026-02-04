@@ -77,13 +77,16 @@
             <li><h6 class="dropdown-header text-uppercase small ls-1">Account</h6></li>
             <li><router-link to="/profile" class="dropdown-item d-flex align-items-center gap-2"><i class="fas fa-user fa-fw text-secondary"></i> My Profile</router-link></li>
             <li><hr class="dropdown-divider border-secondary"></li>
-            <li><button @click="logout" class="dropdown-item d-flex align-items-center gap-2 text-danger"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</button></li>
+            <li><button @click="handleLogout" class="dropdown-item d-flex align-items-center gap-2 text-danger"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</button></li>
           </ul>
         </div>
       </template>
 
       <template v-else>
-        <a href="/login" class="btn btn-primary btn-sm fw-bold px-4 rounded-pill">Login</a>
+        <div class="d-flex gap-2">
+          <a href="/login" class="btn btn-outline-light btn-sm fw-bold px-3 rounded-pill">Login</a>
+          <a href="/register" class="btn btn-primary btn-sm fw-bold px-3 rounded-pill">Register</a>
+        </div>
       </template>
     </div>
   </header>
@@ -110,6 +113,11 @@ const avatarSrc = computed(() => {
   return `/images/avatars/${filename}`;
 });
 
+const handleLogout = async () => {
+    await logout();
+    window.location.href = '/login';
+};
+
 const fetchNotifications = async () => {
     if (!authUser.value) return;
     try {
@@ -121,7 +129,6 @@ const fetchNotifications = async () => {
 }
 
 const handleNotificationUpdate = () => {
-    console.log("⚡ EVENT RECEIVED: 'notification-update-needed'");
     fetchNotifications();
 };
 
@@ -142,7 +149,6 @@ const handleNotificationClick = (notif) => {
         );
         axios.post('/api/notifications/mark-read');
     }
-
     if (notif.data.link) {
         router.push(notif.data.link);
     }
@@ -175,9 +181,7 @@ onMounted(() => {
     fetchUser().then(() => {
         if (authUser.value) {
             fetchNotifications();
-
             window.addEventListener('notification-update-needed', handleNotificationUpdate);
-
             setInterval(fetchNotifications, 30000);
         }
     });
