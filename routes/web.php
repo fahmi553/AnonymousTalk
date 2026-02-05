@@ -104,5 +104,10 @@ Route::get('/run-migrate', function () {
     return "Migrations successful! Database tables are now created.";
 });
 
+Route::get('/force-migrate', function () {
+    \Artisan::call('migrate', ["--force" => true]);
+    return "Database is ready!";
+});
+
 Route::get('/{any}', fn () => view('welcome'))
     ->where('any', '^(?!api|login|register|forgot-password|reset-password|admin).*$');
