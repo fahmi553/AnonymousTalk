@@ -15,6 +15,7 @@ RUN composer install \
     --optimize-autoloader \
     --no-interaction \
     --no-scripts
+RUN rm -f bootstrap/cache/*.php
 ENV WEBROOT=/var/www/html/public
 ENV APP_ENV=production
 ENV APP_DEBUG=false
