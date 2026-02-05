@@ -97,5 +97,12 @@ Route::prefix('admin')->group(function () {
 Route::view('/profile', 'welcome');
 Route::view('/profile/{id}', 'welcome');
 
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/run-migrate', function () {
+    Artisan::call('migrate', ["--force" => true]);
+    return "Migrations successful! Database tables are now created.";
+});
+
 Route::get('/{any}', fn () => view('welcome'))
     ->where('any', '^(?!api|login|register|forgot-password|reset-password|admin).*$');
