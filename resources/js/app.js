@@ -72,28 +72,38 @@ axios.defaults.headers.common['Accept'] = 'application/json';
 axios.interceptors.response.use(
     response => response,
     error => {
+        const guestAllowed = [
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/reset-password',
+            '/admin/login'
+        ];
+
         const currentPath = window.location.pathname;
-        if (currentPath === '/login' || currentPath === '/admin/login') {
+        if (guestAllowed.some(path => currentPath.startsWith(path))) {
             return Promise.reject(error);
         }
 
         if (error.response) {
             const status = error.response.status;
-            if ((status === 419 || status === 401)) {
+
+            if (status === 401 || status === 419) {
                 localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
-                return Promise.reject(error);
             }
-            if (status === 403 && error.response.data.banned) {
+
+            if (status === 403 && error.response.data?.banned) {
                 alert(error.response.data.message);
                 localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
-                return Promise.reject(error);
             }
         }
+
         return Promise.reject(error);
     }
 );
+
 const app = createApp({})
 const { fetchUser } = useAuth();
 
