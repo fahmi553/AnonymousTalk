@@ -10,6 +10,7 @@ export default {
         './resources/views/**/*.blade.php',
         './resources/js/**/*.vue',
         './app/**/*.php',
+        './resources/js/**/*.js',
     ],
 
     theme: {

@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 import '../css/app.css'
+import '../css/style.css'
 import axios from 'axios'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
