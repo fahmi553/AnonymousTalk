@@ -11,6 +11,8 @@ use Illuminate\Auth\Events\PasswordReset;
 use App\Models\User;
 use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Auth\GoogleController;
+use Illuminate\Support\Facades\Artisan;
+
 
 Route::get('/', fn () => view('welcome'));
 
@@ -97,7 +99,7 @@ Route::prefix('admin')->group(function () {
 Route::view('/profile', 'welcome');
 Route::view('/profile/{id}', 'welcome');
 
-use Illuminate\Support\Facades\Artisan;
+
 
 Route::get('/run-migrate', function () {
     Artisan::call('migrate', ["--force" => true]);
@@ -107,6 +109,15 @@ Route::get('/run-migrate', function () {
 Route::get('/force-migrate', function () {
     \Artisan::call('migrate', ["--force" => true]);
     return "Database is ready!";
+});
+
+Route::get('/clear-all-cache', function () {
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('view:clear');
+    Artisan::call('route:clear');
+
+    return "All caches cleared successfully! Your app is now reading the fresh .env and database.php settings.";
 });
 
 Route::get('/{any}', fn () => view('welcome'))
