@@ -63,7 +63,7 @@
               <p class="text-body-secondary mb-0">{{ reportData.user.email }}</p>
               <small class="text-muted d-block">Joined: {{ formatDate(reportData.user.created_at) }}</small>
 
-              <div class="mt-2 d-flex flex-wrap gap-2">
+              <!-- <div class="mt-2 d-flex flex-wrap gap-2">
                 <span
                   class="badge"
                   :class="reportData.user.banned_at ? 'text-bg-danger' : 'text-bg-success'"
@@ -79,7 +79,7 @@
                   <i class="fas fa-flag me-1"></i>
                   Reports: {{ reportData.reports.length }}
                 </span>
-              </div>
+              </div> -->
 
               <div class="mt-3">
                 <h6 class="fw-bold small text-body-emphasis mb-2">Earned Badges</h6>
@@ -191,7 +191,7 @@
             </p>
             <small class="text-muted border-top pt-2 d-block">
               Reported by: <strong>{{ report.reporter?.username || 'Anonymous' }}</strong>
-              <span class="mx-1">•</span>
+              <span class="mx-1">|</span>
               {{ formatDate(report.created_at) }}
             </small>
           </div>
@@ -443,3 +443,4 @@ onMounted(() => {
     to { opacity: 1; transform: translateY(0); }
 }
 </style>
+
