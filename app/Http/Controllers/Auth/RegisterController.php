@@ -37,7 +37,6 @@ class RegisterController extends Controller
             'role'        => 'user',
         ]);
 
-        event(new Registered($user));
         Auth::login($user);
         return redirect('/')->with('success', 'Registration successful! Please check your email.');
     }
