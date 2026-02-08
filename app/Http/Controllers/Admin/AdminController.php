@@ -174,7 +174,7 @@ class AdminController extends Controller
 
     public function getUserReportDetails($userId)
     {
-        $user = User::where('user_id', $userId)->firstOrFail();
+        $user = User::with('badges')->where('user_id', $userId)->firstOrFail();
         $reports = Report::where('reportable_type', User::class)
             ->where('reportable_id', $userId)
             ->with('reporter:user_id,username')

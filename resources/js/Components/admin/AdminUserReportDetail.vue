@@ -81,6 +81,32 @@
                 </span>
               </div>
 
+              <div class="mt-3">
+                <h6 class="fw-bold small text-body-emphasis mb-2">Earned Badges</h6>
+                <div
+                  v-if="reportData.user.badges && reportData.user.badges.length > 0"
+                  class="d-flex flex-wrap gap-2"
+                >
+                  <div
+                    v-for="badge in reportData.user.badges"
+                    :key="badge.badge_id || badge.id"
+                    class="badge rounded-pill border border-secondary-subtle bg-body-tertiary text-body-emphasis d-inline-flex align-items-center p-1 pe-3"
+                    :title="badge.description"
+                  >
+                    <img
+                      v-if="badge.icon_url"
+                      :src="badge.icon_url"
+                      :alt="badge.badge_name"
+                      width="20"
+                      height="20"
+                      class="me-2"
+                    />
+                    <span class="fw-medium">{{ badge.badge_name }}</span>
+                  </div>
+                </div>
+                <span v-else class="text-muted small">No badges earned yet.</span>
+              </div>
+
               <div v-if="reportData.user.banned_at" class="mt-2 p-2 bg-danger-subtle text-danger rounded border border-danger-subtle small">
                  <strong><i class="fas fa-info-circle me-1"></i> Ban Reason:</strong> {{ reportData.user.ban_reason }}
               </div>
