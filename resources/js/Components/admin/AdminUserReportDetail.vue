@@ -141,7 +141,18 @@
               No pending reports found for this user.
           </div>
           <div v-for="report in reportData.reports" :key="report.id" class="list-group-item bg-body px-4 py-3">
-            <h6 class="text-danger mb-1"><i class="fas fa-flag me-2"></i>Reason: {{ report.reason }}</h6>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                <i class="fas fa-flag me-1"></i> {{ report.reason }}
+              </span>
+              <span
+                class="badge rounded-pill"
+                :class="getSeverityBadge(report.reason)"
+              >
+                {{ getSeverityLabel(report.reason) }} Priority
+              </span>
+              <span class="badge text-bg-secondary">User</span>
+            </div>
             <p class="mb-2 text-body-secondary fst-italic">
               "{{ report.details || 'No additional details provided.' }}"
             </p>
@@ -278,6 +289,29 @@ const getAvatarUrl = (filename) => {
 const formatDate = (dateStr) => {
     if (!dateStr) return 'Unknown';
     return new Date(dateStr).toLocaleDateString();
+};
+
+const severityMap = {
+  'Hate Speech or Discrimination': 'High',
+  'Threats or Intimidation': 'High',
+  'Harassment or Bullying': 'High',
+  'Inappropriate or Explicit Content': 'High',
+  'Trolling or Provocation': 'Medium',
+  'Misinformation or False Claims': 'Medium',
+  'Abuse of Anonymity': 'Medium',
+  'Spam or Advertising': 'Low',
+  'Other': 'Low'
+};
+
+const getSeverityLabel = (reason) => {
+  return severityMap[reason] || 'Medium';
+};
+
+const getSeverityBadge = (reason) => {
+  const label = getSeverityLabel(reason);
+  if (label === 'High') return 'bg-danger';
+  if (label === 'Low') return 'bg-secondary';
+  return 'bg-warning text-dark';
 };
 
 const showToast = (message, type = 'success') => {
