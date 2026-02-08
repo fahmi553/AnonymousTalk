@@ -14,7 +14,7 @@
             <div class="col-6 col-lg-2">
                 <h3 class="h6 fw-semibold text-white">Moderation</h3>
                 <ul class="list-unstyled mt-3 d-grid gap-2">
-                    <li><a href="/admin/dashboard" class="text-white-50 text-decoration-none">Pending Reports</a></li>
+                    <li><a href="/admin/reports" class="text-white-50 text-decoration-none">Pending Reports</a></li>
                     <li><a href="#" class="text-white-50 text-decoration-none">Manage Posts</a></li>
                     <li><a href="#" class="text-white-50 text-decoration-none">Manage Comments</a></li>
                 </ul>

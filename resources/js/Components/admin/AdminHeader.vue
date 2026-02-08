@@ -10,7 +10,7 @@
     <div class="d-flex align-items-center gap-2">
       <ThemeToggle />
       <template v-if="adminUser">
-        <span class="text-white me-3">Hi, {{ adminUser.name || adminUser.email }}</span>
+        <span class="text-white me-3">Hi, {{ displayName }}</span>
         <button @click="logout" class="btn btn-light btn-sm" :disabled="isLoggingOut">
           <span v-if="isLoggingOut" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           <span v-else>Logout</span>
@@ -24,12 +24,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import ThemeToggle from '../anonymous/ThemeToggle.vue';
 
 const adminUser = ref(null);
 const isLoggingOut = ref(false);
+const displayName = computed(() => adminUser.value?.username || adminUser.value?.name || 'Admin');
 
 const fetchAdminUser = async () => {
   try {

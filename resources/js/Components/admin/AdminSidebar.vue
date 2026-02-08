@@ -6,25 +6,25 @@
     <div class="list-group list-group-flush">
 
       <router-link
-        to="/admin/content"
+        to="/admin/dashboard"
         class="list-group-item list-group-item-action"
-        active-class="active"
+        :class="{ 'active': isContentDashboard }"
       >
           <i class="fas fa-layer-group me-2"></i> Content Manager
       </router-link>
 
       <router-link
-        to="/admin/dashboard?tab=user"
+        to="/admin/reports?tab=user"
         class="list-group-item list-group-item-action"
-        :class="{ 'active': isDashboard && currentTab === 'user' }"
+        :class="{ 'active': isReports && currentTab === 'user' }"
       >
         <i class="fas fa-inbox me-2"></i> Pending User Reports
       </router-link>
 
       <router-link
-        to="/admin/dashboard?tab=sentiment"
+        to="/admin/reports?tab=sentiment"
         class="list-group-item list-group-item-action"
-        :class="{ 'active': isDashboard && currentTab === 'sentiment' }"
+        :class="{ 'active': isReports && currentTab === 'sentiment' }"
       >
         <i class="fas fa-robot me-2"></i> Flagged Content
       </router-link>
@@ -54,6 +54,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
-const isDashboard = computed(() => route.path === '/admin/dashboard');
+const isReports = computed(() => route.path === '/admin/reports');
+const isContentDashboard = computed(() => route.path === '/admin/dashboard' || route.path === '/admin/content');
 const currentTab = computed(() => route.query.tab || 'user');
 </script>

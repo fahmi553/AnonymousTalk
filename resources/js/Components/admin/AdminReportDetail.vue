@@ -11,7 +11,7 @@
     </div>
 
     <div v-else-if="reportData">
-      <router-link to="/admin/dashboard" class="btn btn-outline-secondary mb-3">
+      <router-link to="/admin/reports" class="btn btn-outline-secondary mb-3">
         <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
       </router-link>
 
@@ -253,7 +253,7 @@ const confirmAction = async () => {
         showToast(`Successfully processed action.`, 'success');
 
         setTimeout(() => {
-            router.push('/admin/dashboard');
+            router.push('/admin/reports');
         }, 1500);
 
     } catch (err) {

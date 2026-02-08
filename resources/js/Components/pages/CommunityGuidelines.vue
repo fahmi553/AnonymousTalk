@@ -1,11 +1,11 @@
 <template>
   <div class="guidelines-page pb-5">
 
-    <div class="bg-dark text-white py-5 mb-5 border-bottom border-secondary">
+    <div class="bg-body-tertiary text-body py-5 mb-5 border-bottom border-secondary-subtle">
       <div class="container text-center" style="max-width: 700px;">
         <i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
-        <h1 class="display-5 fw-bold">Community Guidelines</h1>
-        <p class="lead text-white-50">
+        <h1 class="display-5 fw-bold text-body-emphasis">Community Guidelines</h1>
+        <p class="lead text-body-secondary">
           We believe in free speech, but we also believe in safety.
           Help us keep Anonymous Talk a place for open, respectful discussion.
         </p>
