@@ -35,7 +35,6 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 @endif
-                <verification-alert></verification-alert>
                 <router-view></router-view>
             </main>
         </div>

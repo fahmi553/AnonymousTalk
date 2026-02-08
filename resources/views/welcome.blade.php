@@ -31,7 +31,6 @@
                     </div>
                 @endif
 
-                <verification-alert></verification-alert>
                 <router-view></router-view>
             </main>
         </div>

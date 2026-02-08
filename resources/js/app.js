@@ -32,7 +32,6 @@ import HelpCenter from './Components/pages/HelpCenter.vue';
 import DiscussionFeed from './Components/pages/DiscussionFeed.vue'
 import CookiePolicy from './Components/pages/CookiePolicy.vue';
 import AdminContent from './Components/admin/AdminContent.vue';
-import VerificationAlert from './Components/VerificationAlert.vue';
 import { useAuth } from './store/auth';
 
 const routes = [
@@ -126,7 +125,6 @@ app.component('comment-form', CommentForm)
 app.component('comment-list', CommentList)
 app.component('like-button', LikeButton)
 app.component('app-sidebar', AppSidebar)
-app.component('verification-alert', VerificationAlert);
 
 function mountApps() {
     if (!app._container) {

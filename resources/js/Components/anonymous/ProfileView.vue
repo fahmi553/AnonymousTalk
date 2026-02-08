@@ -78,9 +78,9 @@
                 <div class="d-flex align-items-center">
                     <i class="fas fa-exclamation-triangle fs-4 me-3 text-warning"></i>
                     <div>
-                        <h6 class="fw-bold mb-0 text-body-emphasis">Account Unverified</h6>
+                        <h6 class="fw-bold mb-0 text-body-emphasis">Email Not Verified</h6>
                         <small class="text-secondary">
-                            Verify your email to unlock posting and comment privileges.
+                            Verifying helps secure your account and improve deliverability.
                         </small>
                     </div>
                 </div>
