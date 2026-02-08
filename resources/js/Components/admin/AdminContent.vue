@@ -7,6 +7,8 @@
       </p> -->
     </div>
 
+    <AdminStats class="mb-4" />
+
     <div class="card bg-body shadow-sm border-0 rounded-lg mb-4">
       <div class="card-body p-3 d-flex gap-3 flex-wrap">
 
@@ -225,6 +227,7 @@
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import AdminStats from './AdminStats.vue';
 
 const router = useRouter();
 const loading = ref(false);
