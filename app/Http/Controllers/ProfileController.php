@@ -370,8 +370,16 @@ class ProfileController extends Controller
             $request->session()->regenerateToken();
 
             if (\App\Models\User::where('user_id', $userId)->orWhere('email', $userEmail)->exists()) {
-                Log::error("Delete Account Failed: user still exists (user_id={$userId})");
-                return response()->json(['message' => 'Account deletion failed. Please try again or contact support.'], 500);
+                // Fallback hard delete in case model delete failed silently.
+                DB::table('users')
+                    ->where('user_id', $userId)
+                    ->orWhere('email', $userEmail)
+                    ->delete();
+
+                if (\App\Models\User::where('user_id', $userId)->orWhere('email', $userEmail)->exists()) {
+                    Log::error("Delete Account Failed: user still exists (user_id={$userId})");
+                    return response()->json(['message' => 'Account deletion failed. Please try again or contact support.'], 500);
+                }
             }
 
             return response()->json(['message' => 'Account deleted successfully.']);
