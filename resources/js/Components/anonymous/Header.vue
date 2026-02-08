@@ -2,7 +2,7 @@
   <header class="header d-flex justify-content-between align-items-center px-4 py-3 bg-dark text-white shadow-sm border-bottom border-secondary sticky-top" style="z-index: 1000;">
 
     <div class="d-flex align-items-center">
-      <router-link to="/" class="text-decoration-none d-flex align-items-center">
+      <router-link to="/feed" class="text-decoration-none d-flex align-items-center">
         <img :src="myLogo" alt="Logo" class="header-logo me-3 rounded-3">
         <h1 class="mb-0 h5 fw-bold text-white tracking-tight">Anonymous Talk</h1>
       </router-link>

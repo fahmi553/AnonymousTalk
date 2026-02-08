@@ -318,6 +318,8 @@ class ProfileController extends Controller
     public function destroy(Request $request)
     {
         $user = $request->user();
+        $userId = $user->user_id;
+        $userEmail = $user->email;
 
         $isGoogleUser = !empty($user->google_id);
 
@@ -328,7 +330,7 @@ class ProfileController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($user) {
+            DB::transaction(function () use ($user, $userId) {
                 $postIds = $user->posts()->pluck('post_id')->toArray();
                 $commentIds = $user->comments()->pluck('comment_id')->toArray();
 
@@ -345,26 +347,32 @@ class ProfileController extends Controller
                 }
 
                 \App\Models\Report::where('reportable_type', \App\Models\User::class)
-                    ->where('reportable_id', $user->user_id)
+                    ->where('reportable_id', $userId)
                     ->delete();
 
                 $user->posts()->delete();
                 $user->comments()->delete();
-                DB::table('likes')->where('user_id', $user->user_id)->delete();
+                DB::table('likes')->where('user_id', $userId)->delete();
                 DB::table('notifications')
-                    ->where('notifiable_id', $user->user_id)
+                    ->where('notifiable_id', $userId)
                     ->where('notifiable_type', \App\Models\User::class)
                     ->delete();
                 $user->trustScoreLogs()->delete();
                 $user->badges()->detach();
                 $user->reportsFiled()->delete();
                 $user->tokens()->delete();
+                DB::table('sessions')->where('user_id', $userId)->delete();
                 $user->delete();
             });
 
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+
+            if (\App\Models\User::where('user_id', $userId)->orWhere('email', $userEmail)->exists()) {
+                Log::error("Delete Account Failed: user still exists (user_id={$userId})");
+                return response()->json(['message' => 'Account deletion failed. Please try again or contact support.'], 500);
+            }
 
             return response()->json(['message' => 'Account deleted successfully.']);
 
