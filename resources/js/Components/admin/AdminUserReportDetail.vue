@@ -63,6 +63,24 @@
               <p class="text-body-secondary mb-0">{{ reportData.user.email }}</p>
               <small class="text-muted d-block">Joined: {{ formatDate(reportData.user.created_at) }}</small>
 
+              <div class="mt-2 d-flex flex-wrap gap-2">
+                <span
+                  class="badge"
+                  :class="reportData.user.banned_at ? 'text-bg-danger' : 'text-bg-success'"
+                >
+                  <i class="fas me-1" :class="reportData.user.banned_at ? 'fa-ban' : 'fa-check-circle'"></i>
+                  {{ reportData.user.banned_at ? 'Banned' : 'Active' }}
+                </span>
+                <span class="badge text-bg-secondary">
+                  <i class="fas fa-user-shield me-1"></i>
+                  {{ reportData.user.role ? reportData.user.role.toUpperCase() : 'USER' }}
+                </span>
+                <span class="badge text-bg-info">
+                  <i class="fas fa-flag me-1"></i>
+                  Reports: {{ reportData.reports.length }}
+                </span>
+              </div>
+
               <div v-if="reportData.user.banned_at" class="mt-2 p-2 bg-danger-subtle text-danger rounded border border-danger-subtle small">
                  <strong><i class="fas fa-info-circle me-1"></i> Ban Reason:</strong> {{ reportData.user.ban_reason }}
               </div>
@@ -141,18 +159,7 @@
               No pending reports found for this user.
           </div>
           <div v-for="report in reportData.reports" :key="report.id" class="list-group-item bg-body px-4 py-3">
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                <i class="fas fa-flag me-1"></i> {{ report.reason }}
-              </span>
-              <span
-                class="badge rounded-pill"
-                :class="getSeverityBadge(report.reason)"
-              >
-                {{ getSeverityLabel(report.reason) }} Priority
-              </span>
-              <span class="badge text-bg-secondary">User</span>
-            </div>
+            <h6 class="text-danger mb-1"><i class="fas fa-flag me-2"></i>Reason: {{ report.reason }}</h6>
             <p class="mb-2 text-body-secondary fst-italic">
               "{{ report.details || 'No additional details provided.' }}"
             </p>
@@ -291,28 +298,6 @@ const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString();
 };
 
-const severityMap = {
-  'Hate Speech or Discrimination': 'High',
-  'Threats or Intimidation': 'High',
-  'Harassment or Bullying': 'High',
-  'Inappropriate or Explicit Content': 'High',
-  'Trolling or Provocation': 'Medium',
-  'Misinformation or False Claims': 'Medium',
-  'Abuse of Anonymity': 'Medium',
-  'Spam or Advertising': 'Low',
-  'Other': 'Low'
-};
-
-const getSeverityLabel = (reason) => {
-  return severityMap[reason] || 'Medium';
-};
-
-const getSeverityBadge = (reason) => {
-  const label = getSeverityLabel(reason);
-  if (label === 'High') return 'bg-danger';
-  if (label === 'Low') return 'bg-secondary';
-  return 'bg-warning text-dark';
-};
 
 const showToast = (message, type = 'success') => {
     toastMessage.value = message;
