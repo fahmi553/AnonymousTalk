@@ -199,6 +199,10 @@
                                 class="form-control"
                                 id="deletePasswordInput"
                                 placeholder="Password"
+                                name="delete_password"
+                                autocomplete="new-password"
+                                :readonly="deletePasswordLocked"
+                                @focus="deletePasswordLocked = false"
                             >
                             <label for="deletePasswordInput">Current Password</label>
                         </div>
@@ -255,6 +259,7 @@ const deletePassword = ref("");
 const deleting = ref(false);
 const deleteError = ref("");
 const isGoogleUser = ref(false);
+const deletePasswordLocked = ref(true);
 
 const currentAvatarUrl = computed(() => {
     return form.value.avatar ? `/images/avatars/${form.value.avatar}` : '/images/avatars/default.jpg';

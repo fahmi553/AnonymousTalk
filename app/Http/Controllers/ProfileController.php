@@ -329,17 +329,37 @@ class ProfileController extends Controller
 
         try {
             DB::transaction(function () use ($user) {
+                $postIds = $user->posts()->pluck('post_id')->toArray();
+                $commentIds = $user->comments()->pluck('comment_id')->toArray();
+
+                if (!empty($postIds)) {
+                    \App\Models\Report::where('reportable_type', \App\Models\Post::class)
+                        ->whereIn('reportable_id', $postIds)
+                        ->delete();
+                }
+
+                if (!empty($commentIds)) {
+                    \App\Models\Report::where('reportable_type', \App\Models\Comment::class)
+                        ->whereIn('reportable_id', $commentIds)
+                        ->delete();
+                }
+
+                \App\Models\Report::where('reportable_type', \App\Models\User::class)
+                    ->where('reportable_id', $user->user_id)
+                    ->delete();
+
                 $user->posts()->delete();
                 $user->comments()->delete();
                 DB::table('likes')->where('user_id', $user->user_id)->delete();
-                DB::table('notifications')->where('notifiable_id', $user->user_id)->delete();
+                DB::table('notifications')
+                    ->where('notifiable_id', $user->user_id)
+                    ->where('notifiable_type', \App\Models\User::class)
+                    ->delete();
                 $user->trustScoreLogs()->delete();
                 $user->badges()->detach();
                 $user->reportsFiled()->delete();
-                $user->delete();
                 $user->tokens()->delete();
                 $user->delete();
-                $user->tokens()->delete();
             });
 
             Auth::guard('web')->logout();

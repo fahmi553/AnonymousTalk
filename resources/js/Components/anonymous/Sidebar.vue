@@ -1,3 +1,11 @@
+<script setup>
+import { computed } from 'vue';
+import { useAuth } from '../../store/auth';
+
+const { authUser } = useAuth();
+const isAuthenticated = computed(() => !!authUser.value);
+</script>
+
 <template>
   <div class="card bg-body border-0 rounded-4 shadow-sm sticky-top" style="top: 6rem;">
     <div class="card-body p-4">
@@ -9,12 +17,12 @@
             <i class="fas fa-stream me-3 width-20"></i> Discussion Feed
           </router-link>
         </li>
-        <li>
+        <li v-if="isAuthenticated">
           <router-link to="/posts/create" class="sidebar-link">
             <i class="fas fa-plus-circle me-3 width-20"></i> Create Post
           </router-link>
         </li>
-        <li>
+        <li v-if="isAuthenticated">
           <router-link to="/profile" class="sidebar-link">
             <i class="fas fa-user me-3 width-20"></i> My Profile
           </router-link>

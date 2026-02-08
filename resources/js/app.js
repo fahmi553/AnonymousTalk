@@ -74,6 +74,15 @@ axios.interceptors.response.use(
     response => response,
     error => {
         const guestAllowed = [
+            '/',
+            '/feed',
+            '/posts',
+            '/profile',
+            '/community-guidelines',
+            '/help',
+            '/privacy',
+            '/terms',
+            '/cookies',
             '/login',
             '/register',
             '/forgot-password',
@@ -90,6 +99,10 @@ axios.interceptors.response.use(
             const status = error.response.status;
 
             if (status === 401 || status === 419) {
+                const requestUrl = error.config?.url || '';
+                if (requestUrl.includes('/api/user')) {
+                    return Promise.reject(error);
+                }
                 localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
             }
