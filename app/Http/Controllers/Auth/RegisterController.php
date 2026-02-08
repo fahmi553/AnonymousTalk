@@ -33,7 +33,7 @@ class RegisterController extends Controller
             'username'    => $newUsername,
             'email'       => $request->email,
             'password'    => Hash::make($request->password),
-            'trust_score' => 0,
+            'trust_score' => 10,
             'role'        => 'user',
         ]);
 
