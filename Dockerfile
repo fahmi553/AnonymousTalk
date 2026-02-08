@@ -22,4 +22,8 @@ ENV APP_DEBUG=false
 ENV LOG_CHANNEL=stderr
 ENV SESSION_DRIVER=cookie
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 EXPOSE 80
