@@ -49,8 +49,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 // Authenticated routes
 Route::middleware('auth')->group(function () {
 
-    Route::post('/posts', [PostController::class, 'store'])
-        ->middleware('verified');
+    Route::post('/posts', [PostController::class, 'store']);
 
     Route::patch('/posts/{post}/status', [PostController::class, 'updateStatus']);
     Route::patch('/comments/{comment}/status', [CommentController::class, 'updateStatus']);
@@ -58,8 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/posts/{id}', [PostController::class, 'destroy']);
     Route::post('/report', [ReportController::class, 'store']);
 
-    Route::post('/comments', [CommentController::class, 'store'])
-        ->middleware('verified');
+    Route::post('/comments', [CommentController::class, 'store']);
 
     Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
     Route::post('/comments/{id}/report', [CommentController::class, 'report']);
